@@ -25,7 +25,7 @@ contract DeploySmartAccountUtilContractsTest is Test {
             .run();
     }
 
-    function testIfSmartAccountUtilContractsDeployed() external {
+    function testIfSmartAccountUtilContractsDeployed() external view {
         assert(
             smartAccount != address(0) &&
                 address(accountFactory) != address(0) &&

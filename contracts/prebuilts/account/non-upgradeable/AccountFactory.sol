@@ -16,10 +16,6 @@ import "../interface/IEntrypoint.sol";
 // Smart wallet implementation
 import { Account } from "./Account.sol";
 
-// CCIP
-import { CrossChainTokenTransfer } from "../utils/CrossChainTokenTransfer.sol";
-import { CrossChainTokenTransferMaster } from "../utils/CrossChainTokenTransferMaster.sol";
-
 //   $$\     $$\       $$\                 $$\                         $$\
 //   $$ |    $$ |      \__|                $$ |                        $$ |
 // $$$$$$\   $$$$$$$\  $$\  $$$$$$\   $$$$$$$ |$$\  $$\  $$\  $$$$$$\  $$$$$$$\
@@ -35,31 +31,16 @@ contract AccountFactory is BaseAccountFactory, ContractMetadata, PermissionsEnum
     event CrossChainTokenTransferContractDeployed(address indexed);
     event CrossChainTokenTransferMasterContractDeployed(address indexed);
 
-    // States //
-    CrossChainTokenTransfer public crossChainTokenTransfer;
-    CrossChainTokenTransferMaster public crossChainTokenTransferMaster;
-
     /*///////////////////////////////////////////////////////////////
                             Constructor
     //////////////////////////////////////////////////////////////*/
 
     constructor(
-        IEntryPoint _entrypoint,
-        address _router,
-        address _link
+        IEntryPoint _entrypoint
     ) BaseAccountFactory(address(new Account(_entrypoint, address(this))), address(_entrypoint)) {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        crossChainTokenTransfer = new CrossChainTokenTransfer(_router, _link);
-        crossChainTokenTransferMaster = new CrossChainTokenTransferMaster(address(crossChainTokenTransfer), _link);
 
         emit AccountFactoryContractDeployed(address(this));
-        emit CrossChainTokenTransferContractDeployed(address(crossChainTokenTransfer));
-        emit CrossChainTokenTransferMasterContractDeployed(address(crossChainTokenTransferMaster));
-    }
-
-    ///@dev  returns cross chain contract details
-    function getCrossChainData() external view returns (address, address) {
-        return (address(crossChainTokenTransfer), address(crossChainTokenTransferMaster));
     }
 
     ///@dev  returns Account lock contract details

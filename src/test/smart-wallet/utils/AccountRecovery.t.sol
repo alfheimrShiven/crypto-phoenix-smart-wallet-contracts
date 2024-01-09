@@ -48,7 +48,7 @@ contract AccountRecoveryTest is Test {
         return accountRecovery.getRecoveryRequest();
     }
 
-    function _signAndReturnSignature(uint256 signerPK, bytes32 recoveryRequest) internal returns (bytes memory) {
+    function _signAndReturnSignature(uint256 signerPK, bytes32 recoveryRequest) internal pure returns (bytes memory) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPK, recoveryRequest);
         bytes memory signature = abi.encodePacked(r, s, v);
         return signature;
@@ -63,7 +63,7 @@ contract AccountRecoveryTest is Test {
         // adding guardians
         (firstGuard, firstGuardPK) = makeAddrAndKey("firstGuardian");
         (secondGuard, secondGuardPK) = makeAddrAndKey("secondGuardian");
-        (address thirdGuard, uint256 thirdGuardPK) = makeAddrAndKey("thirdGuardian");
+        (address thirdGuard /* uint256 thirdGuardPK */, ) = makeAddrAndKey("thirdGuardian");
 
         // guardians signing up in the system
         vm.prank(firstGuard);
