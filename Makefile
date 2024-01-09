@@ -41,5 +41,5 @@ ifeq ($(findstring --network ganache,$(ARGS)),--network ganache)
 	NETWORK_ARGS := --rpc-url $(GANACHE_RPC_URL) --private-key $(GANACHE_PRIVATE_KEY) --broadcast -vvvv
 endif
 
-deploy:
+deploy_smart_wallet_factory:
 	@forge script scripts/DeploySmartAccountUtilContracts.s.sol:DeploySmartAccountUtilContracts $(NETWORK_ARGS)
