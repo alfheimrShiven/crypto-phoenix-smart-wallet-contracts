@@ -178,10 +178,9 @@ contract AccountBenchmarkTest is BaseTest {
 
         // Setup contracts
         entrypoint = new EntryPoint();
-        address _router = address(0x0BF3dE8c5D3e8A2B34D2BEeB17ABfCeBaf363A59);
-        address _link = address(0x779877A7B0D9E8603169DdbD7836e478b4624789);
+
         // deploy account factory
-        accountFactory = new AccountFactory(IEntryPoint(payable(address(entrypoint))), _router, _link);
+        accountFactory = new AccountFactory(IEntryPoint(payable(address(entrypoint))));
         // deploy dummy contract
         numberContract = new Number();
     }
