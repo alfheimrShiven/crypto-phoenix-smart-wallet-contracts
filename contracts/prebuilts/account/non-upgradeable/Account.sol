@@ -56,7 +56,6 @@ contract Account is AccountCore, ContractMetadata, ERC1271, ERC721Holder, ERC115
 
     /// @notice The account can be paused only by the AccountLock contract
     modifier onlyAccountLock(address locker) {
-        console.log("AccountLock address in Account.sol", accountLock);
         if (locker != accountLock) {
             revert NotAuthorizedToLock(locker, accountLock);
         }
@@ -152,10 +151,8 @@ contract Account is AccountCore, ContractMetadata, ERC1271, ERC721Holder, ERC115
     function updateAdmin(address newAdmin) external onlyAccountRecovery(msg.sender) {
         // retrieving `recoveryEmailData` from `AccountCore::recoveryEmailData` passed during initialization of smart account contract
         AccountCoreStorage.data().firstAdmin = newAdmin;
-        console.log("Account Core storage set!");
 
         _setAdmin(newAdmin, true, recoveryEmailData);
-        console.log("_setAdmin set!");
 
         emit AdminUpdated(newAdmin);
     }

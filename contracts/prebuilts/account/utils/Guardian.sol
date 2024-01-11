@@ -73,7 +73,7 @@ contract Guardian is IGuardian {
         accountToAccountRecovery[account] = accountRecovery;
     }
 
-    function addAccountToGuardian(address guardian, address account) external {
+    function addGuardianToAccount(address guardian, address account) external {
         guardianToAccounts[guardian].push(account);
     }
 

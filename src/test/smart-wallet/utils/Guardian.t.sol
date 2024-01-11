@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.12;
 
+import { AccountFactory } from "contracts/prebuilts/account/non-upgradeable/AccountFactory.sol";
 import { Guardian } from "contracts/prebuilts/account/utils/Guardian.sol";
 import { IGuardian } from "contracts/prebuilts/account/interface/IGuardian.sol";
 import { Test } from "forge-std/Test.sol";
@@ -9,13 +10,14 @@ import { DeploySmartAccountUtilContracts } from "scripts/DeploySmartAccountUtilC
 contract GuardianTest is Test {
     Guardian public guardian;
     address account;
+    AccountFactory factory;
+    DeploySmartAccountUtilContracts deployer;
     address public user = makeAddr("guardianUser");
-    address public owner = msg.sender;
     uint256 public STARTING_USER_BALANCE = 10 ether;
 
     function setUp() external {
-        DeploySmartAccountUtilContracts deployer = new DeploySmartAccountUtilContracts();
-        (account, , guardian, , , ) = deployer.run();
+        deployer = new DeploySmartAccountUtilContracts();
+        (account, factory, guardian, , , ) = deployer.run();
         vm.deal(user, STARTING_USER_BALANCE);
     }
 
@@ -27,7 +29,7 @@ contract GuardianTest is Test {
         vm.prank(user);
         guardian.addVerifiedGuardian();
 
-        vm.prank(owner);
+        vm.prank(address(factory));
         assert(guardian.getVerifiedGuardians().length > 0);
     }
 
@@ -55,7 +57,6 @@ contract GuardianTest is Test {
         guardian.addVerifiedGuardian();
 
         assertEq(guardian.isVerifiedGuardian(user), true);
-        assertEq(guardian.isVerifiedGuardian(owner), false);
     }
 
     ///////////////////////////////////////
@@ -92,7 +93,7 @@ contract GuardianTest is Test {
         guardian.addVerifiedGuardian();
 
         // ACT/assert
-        vm.prank(owner);
+        vm.prank(address(factory));
         uint256 verifiedGuardiansCount = guardian.getVerifiedGuardians().length;
         assertEq(verifiedGuardiansCount, 1);
     }

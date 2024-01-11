@@ -5,7 +5,6 @@ import { IAccountRecovery } from "../interface/IAccountRecovery.sol";
 // import { IAccount } from "../interface/IAccount.sol";
 import { AccountGuardian } from "./AccountGuardian.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "forge-std/console.sol";
 
 contract AccountRecovery is IAccountRecovery {
     event RecoveryHash(bytes32 recoveryHash);
@@ -180,8 +179,6 @@ contract AccountRecovery is IAccountRecovery {
         bytes32 generatedEmailVerificationHash = keccak256(abi.encodePacked(token, nonce));
         emit RecoveryHash(emailVerificationHash);
         emit GeneratedHash(generatedEmailVerificationHash);
-
-        console.log("Do the email hash match:", (generatedEmailVerificationHash == emailVerificationHash));
 
         if (generatedEmailVerificationHash != emailVerificationHash) {
             revert EmailVerificationFailed();

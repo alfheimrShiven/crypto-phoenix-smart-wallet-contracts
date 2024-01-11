@@ -49,7 +49,7 @@ contract AccountGuardian is IAccountGuardian {
     function addGuardian(address guardian) external onlyOwnerAccountLockAccountRecovery {
         if (guardianContract.isVerifiedGuardian(guardian)) {
             accountGuardians.push(guardian);
-            guardianContract.addAccountToGuardian(guardian, owner);
+            guardianContract.addGuardianToAccount(guardian, owner);
             emit GuardianAdded(guardian);
         } else {
             revert GuardianNotVerified(guardian);
