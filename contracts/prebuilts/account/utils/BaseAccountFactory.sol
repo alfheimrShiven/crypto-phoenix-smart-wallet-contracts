@@ -72,10 +72,10 @@ abstract contract BaseAccountFactory is IAccountFactory, Multicall {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Deploys a new Account for admin.
-    function createAccount(address _admin, bytes calldata _data) external virtual override returns (address) {
+    function createAccount(address _admin, bytes calldata _email) external virtual override returns (address) {
         address impl = accountImplementation;
-        string memory recoveryEmail = abi.decode(_data, (string));
-        bytes32 salt = _generateSalt(_data);
+        string memory recoveryEmail = abi.decode(_email, (string));
+        bytes32 salt = _generateSalt(_email);
 
         address account = Clones.predictDeterministicAddress(impl, salt);
 
@@ -89,7 +89,7 @@ abstract contract BaseAccountFactory is IAccountFactory, Multicall {
             require(allAccounts.add(account), "AccountFactory: account already registered");
         }
 
-        _initializeAccount(account, _admin, address(guardian), _data);
+        _initializeAccount(account, _admin, address(guardian), _email);
         emit AccountCreated(account, _admin);
 
         accountGuardian = new AccountGuardian(guardian, accountLock, payable(account), emailService, recoveryEmail);

@@ -1,6 +1,6 @@
 <p align="center">
-<h1 align="center">CryptoPhoenix Smart Wallet Contracts</h1>
-<p>CryptoPhoenix Wallet SDK is a rollup to thirdweb's smart wallet contracts and offers: <br />
+<h1 align="center">Guardian Smart Wallet Contracts 👮🏻‍♂️</h1>
+<p>Guardian Smart Wallet Contracts is a rollup to thirdweb's smart wallet contracts and offers: <br />
 <ol>
 <li>Smart Accounts</li>
 <li>Social Account Locking</li>
@@ -11,7 +11,7 @@
 ## Problem Statement
 As we all know, a wallet is a gateway to web3 but the wallet experience is unfortunately broken! For a user to interact with a blockchain, they not only have to **create a wallet but also secure their private keys and seed phrase, purchase native tokes to pay for gas, and sign every single action** that they take on a dApp. 
 
-Such an intimidating user experience for newcomers is a big obstacle in the mass adoption of web3 and CryptoPhoenix Wallet SDK is here to change this through its **Account abstraction technology.**
+Such an intimidating user experience for newcomers is a big obstacle in the mass adoption of web3 and Guardian Wallet SDK is here to change this through its **Account abstraction technology.**
 
 ## Smart wallets and its features
 Smart wallets are wallets that are controlled by a smart contract and have the following key benefits-
@@ -36,7 +36,7 @@ Enables self executing transactions when certain defined conditions are met like
  
 ## Architecture
 
-<img src="./images/architecture.png" width="600" alt="cryptophoenix_architecture">
+<img src="./images/architecture.png" width="600" alt="Guardian_architecture">
 <br/>
 <br />
 
@@ -54,7 +54,7 @@ The wallet SDK is a rollup to thirdweb's smart wallet (ERC-4337) contracts. We'v
 
 ## Documentation 
 
-[**CryptoPhoenix Smart Wallet Contract Docs**](https://0xshiven.gitbook.io/cryptophoenix/)
+[**Guardian Smart Wallet Contract Docs**](https://0xshiven.gitbook.io/Guardian/)
 
 ## Author: 
 ### Shivendra Singh
