@@ -68,7 +68,7 @@ interface IGuardian {
      * @param guardian Guardian to be added to account
      * @param account Account whose guardian list is to be updated.
      */
-    function addAccountToGuardian(address guardian, address account) external;
+    function addGuardianToAccount(address guardian, address account) external;
 
     //////////////////////////////////////
     /////////// Getter Function //////////

@@ -16,7 +16,6 @@ contract AccountGuardianTest is Test {
     AccountGuardian accountGuardian;
     Guardian public guardianContract;
     AccountLock public accountLock;
-    address owner = makeAddr("owner");
     address randomUser = makeAddr("randomUser");
     address guardian = makeAddr("guardian");
 
@@ -46,7 +45,7 @@ contract AccountGuardianTest is Test {
     }
 
     function testRevertOnAddingUnverifiedGuardian() public {
-        vm.prank(owner);
+        vm.prank(smartAccount);
         vm.expectRevert(abi.encodeWithSelector(IAccountGuardian.GuardianNotVerified.selector, randomUser));
 
         accountGuardian.addGuardian(randomUser);
@@ -54,7 +53,7 @@ contract AccountGuardianTest is Test {
 
     function testAddGuardianAddsGuardianToList() public addVerifiedGuardian {
         // ACT
-        vm.startPrank(owner);
+        vm.startPrank(smartAccount);
         accountGuardian.addGuardian(guardian);
 
         address[] memory accountGuardians = accountGuardian.getAllGuardians();
@@ -75,14 +74,14 @@ contract AccountGuardianTest is Test {
     }
 
     function testRevertIfRemovingGuardianThatDoesNotExist() external {
-        vm.prank(owner);
+        vm.prank(smartAccount);
         vm.expectRevert(abi.encodeWithSelector(IAccountGuardian.NotAGuardian.selector, guardian));
         accountGuardian.removeGuardian(guardian);
     }
 
     function testRemoveGuardianRemovesGuardianFromList() external addVerifiedGuardian {
         // SETUP
-        vm.startPrank(owner);
+        vm.startPrank(smartAccount);
         accountGuardian.addGuardian(guardian);
 
         // Act
@@ -108,7 +107,7 @@ contract AccountGuardianTest is Test {
 
     function testGetAllGuardians() external addVerifiedGuardian {
         // SETUP
-        vm.startPrank(owner);
+        vm.startPrank(smartAccount);
         accountGuardian.addGuardian(guardian);
 
         // ACT
@@ -125,7 +124,7 @@ contract AccountGuardianTest is Test {
 
     function testIsAccountGuardian() external addVerifiedGuardian {
         //SETUP
-        vm.startPrank(owner);
+        vm.startPrank(smartAccount);
         accountGuardian.addGuardian(guardian);
 
         // Assert
