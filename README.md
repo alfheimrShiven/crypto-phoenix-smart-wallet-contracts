@@ -54,7 +54,7 @@ The wallet SDK is a rollup to thirdweb's smart wallet (ERC-4337) contracts. We'v
 
 ## Documentation 
 
-[**Guardian Smart Wallet Contract Docs**](https://0xshiven.gitbook.io/Guardian/)
+[**Guardian Smart Wallet Contract Docs**](https://0xshiven.gitbook.io/guardian-smart-wallet-contracts)
 
 ## Author: 
 ### Shivendra Singh
