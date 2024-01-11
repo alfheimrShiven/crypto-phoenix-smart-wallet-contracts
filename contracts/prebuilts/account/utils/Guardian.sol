@@ -3,7 +3,6 @@ pragma solidity ^0.8.12;
 
 import { IGuardian } from "../interface/IGuardian.sol";
 import { AccountRecovery } from "./AccountRecovery.sol";
-import { console } from "forge-std/Console.sol";
 
 contract Guardian is IGuardian {
     address[] private verifiedGuardians;
@@ -16,14 +15,11 @@ contract Guardian is IGuardian {
 
     constructor() {
         owner = msg.sender;
-        console.log("Owner of Guardian contract:", owner);
     }
 
     modifier onlyOwner() {
         if (msg.sender != owner) {
             revert NotOwner();
-            console.log("Sender:", msg.sender);
-            console.log("Owner:", owner);
         }
         _;
     }
