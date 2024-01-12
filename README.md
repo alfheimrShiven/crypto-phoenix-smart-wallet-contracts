@@ -45,13 +45,16 @@ Enables self executing transactions when certain defined conditions are met like
 
 ## Contracts
 The wallet SDK is a rollup to thirdweb's smart wallet (ERC-4337) contracts. We've added the following contracts to extend it's functionality:
+<ul>
 <li> <b>Account.sol:</b>This is the smart contract that powers the smart wallet by offering features like executing single or batched transactions, locking account assets and updating the owner of the smart account incase of an account recovery is made.</li>
 <li> <b>AccountGuardian.sol:</b> Used by the user to assign guardians for smart wallet accounts. </li>
 <li> <b>Guardian.sol:</b> Powers the guardian interactions, like attending to account lock & recovery requests for the account they are guarding. </li>
 <li> <b>AccountLock.sol:</b> Adds features like creating account lock requests and evaluating concensus on them followed by locking/unlocking the account assets.</li>
 <li> <b>AccountRecovery.sol:</b> One of the most important contracts adding features like creating account recovery requests and evaluating concensus on them. Once the concensus is achieved, a new embedded wallet is created and made the owner of the smart contract holding all user assets, thus recovering the account.</li>
+</ul>
 
-
+<summary><b>⚠️ Warning</b></summary>
+  <p>The above mentioned contracts are unaudited. Kindly include them in the scope of your audits before going live.</p>
 ## Documentation 
 
 [**Guardian Smart Wallet Contract Docs**](https://0xshiven.gitbook.io/guardian-smart-wallet-contracts)
