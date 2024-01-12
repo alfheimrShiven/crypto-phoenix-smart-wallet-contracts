@@ -53,8 +53,9 @@ The wallet SDK is a rollup to thirdweb's smart wallet (ERC-4337) contracts. We'v
 <li> <b>AccountRecovery.sol:</b> One of the most important contracts adding features like creating account recovery requests and evaluating concensus on them. Once the concensus is achieved, a new embedded wallet is created and made the owner of the smart contract holding all user assets, thus recovering the account.</li>
 </ul>
 
-<summary><b>⚠️ Warning</b></summary>
+<summary><b>⚠️ Disclaimer</b></summary>
   <p>The above mentioned contracts are unaudited. Kindly include them in the scope of your audits before going live.</p>
+  
 ## Documentation 
 
 [**Guardian Smart Wallet Contract Docs**](https://0xshiven.gitbook.io/guardian-smart-wallet-contracts)
