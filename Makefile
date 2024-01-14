@@ -47,3 +47,6 @@ endif
 
 deploy_smart_wallet_factory:
 	@forge script scripts/DeploySmartAccountUtilContracts.s.sol:DeploySmartAccountUtilContracts $(NETWORK_ARGS)
+
+deploy_entrypoint:
+	@forge script scripts/DeployEntryPoint.s.sol:DeployEntryPointContract $(NETWORK_ARGS)
