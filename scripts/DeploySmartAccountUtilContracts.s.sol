@@ -3,6 +3,7 @@ pragma solidity ^0.8.12;
 
 import { Script } from "forge-std/Script.sol";
 import { EntryPoint } from "contracts/prebuilts/account/utils/EntryPoint.sol";
+import { HelperConfig } from "./HelperConfig.s.sol";
 import { AccountLock } from "contracts/prebuilts/account/utils/AccountLock.sol";
 import { AccountFactory } from "contracts/prebuilts/account/non-upgradeable/AccountFactory.sol";
 import { Account } from "contracts/prebuilts/account/non-upgradeable/Account.sol";
@@ -13,32 +14,32 @@ import { AccountRecovery } from "contracts/prebuilts/account/utils/AccountRecove
 contract DeploySmartAccountUtilContracts is Script {
     address public admin = makeAddr("admin");
     address smartWalletAccount;
+    address payable entryPointAddress;
+    EntryPoint entryPoint;
+    address networkAccount;
+    HelperConfig.NetworkConfig activeNetworkConfig;
+
+    constructor() {
+        HelperConfig config = new HelperConfig();
+        (networkAccount, entryPointAddress) = config.activeNetworkConfig();
+
+        entryPoint = EntryPoint(entryPointAddress);
+    }
 
     // This deploy script should only be used for testing purposes as it deploys a smart account as well.
     function run() external returns (address, AccountFactory, Guardian, AccountLock, AccountGuardian, AccountRecovery) {
-        EntryPoint _entryPoint;
         AccountFactory accountFactory;
 
-        if (block.chainid == 11155111) {
-            // Sepolia
+        uint64 currentNonce = vm.getNonce(networkAccount);
+        vm.setNonce(networkAccount, currentNonce);
 
-            vm.startBroadcast(vm.envUint("SEPOLIA_PRIVATE_KEY"));
-            _entryPoint = new EntryPoint();
-            accountFactory = new AccountFactory(_entryPoint);
+        vm.broadcast(networkAccount);
+        accountFactory = new AccountFactory(entryPoint);
 
-            ///@dev accountGuardian is deployed when new smart account is created using the AccountFactory::createAccount(...)
-            smartWalletAccount = accountFactory.createAccount(admin, abi.encode("shiven@gmail.com"));
-            vm.stopBroadcast();
-        } else {
-            // Anvil
-            vm.startBroadcast();
-            _entryPoint = new EntryPoint();
-            accountFactory = new AccountFactory(_entryPoint);
-
-            ///@dev accountGuardian is deployed when new smart account is created using the AccountFactory::createAccount(...)
-            smartWalletAccount = accountFactory.createAccount(admin, abi.encode("shiven@gmail.com"));
-            vm.stopBroadcast();
-        }
+        ///@dev accountGuardian is deployed when new smart account is created using the AccountFactory::createAccount(...)
+        vm.setNonce(networkAccount, currentNonce + 1);
+        vm.prank(networkAccount);
+        smartWalletAccount = accountFactory.createAccount(admin, abi.encode("shiven@gmail.com"));
 
         Guardian guardianContract = accountFactory.guardian();
         AccountLock accountLock = accountFactory.accountLock();

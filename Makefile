@@ -37,9 +37,16 @@ ifeq ($(findstring --network sepolia,$(ARGS)),--network sepolia)
 	NETWORK_ARGS := --rpc-url $(SEPOLIA_RPC_URL) --private-key $(SEPOLIA_PRIVATE_KEY) --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY) -vvvv
 endif
 
+ifeq ($(findstring --network areon,$(ARGS)),--network areon)
+	NETWORK_ARGS := --rpc-url $(AREON_RPC_URL) --private-key $(AREON_PRIVATE_KEY) --broadcast -vvvv
+endif
+
 ifeq ($(findstring --network ganache,$(ARGS)),--network ganache)
 	NETWORK_ARGS := --rpc-url $(GANACHE_RPC_URL) --private-key $(GANACHE_PRIVATE_KEY) --broadcast -vvvv
 endif
 
 deploy_smart_wallet_factory:
 	@forge script scripts/DeploySmartAccountUtilContracts.s.sol:DeploySmartAccountUtilContracts $(NETWORK_ARGS)
+
+deploy_entrypoint:
+	@forge script scripts/DeployEntryPoint.s.sol:DeployEntryPointContract $(NETWORK_ARGS)
