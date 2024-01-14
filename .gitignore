@@ -58,4 +58,11 @@ corpus/
 # IDES
 .idea
 
+# Ignores development broadcast logs
+!/broadcast
+/broadcast/*/31337/
+/broadcast/*/11155111/
+/broadcast/*/462/
+/broadcast/**/dry-run/
+
 *.DS_Store

@@ -29,6 +29,16 @@ contract DeploySmartAccountUtilContracts is Script {
             ///@dev accountGuardian is deployed when new smart account is created using the AccountFactory::createAccount(...)
             smartWalletAccount = accountFactory.createAccount(admin, abi.encode("shiven@gmail.com"));
             vm.stopBroadcast();
+        } else if (block.chainid == 462) {
+            // Areon
+
+            vm.startBroadcast(vm.envUint("AREON_PRIVATE_KEY"));
+            _entryPoint = new EntryPoint();
+            accountFactory = new AccountFactory(_entryPoint);
+
+            ///@dev accountGuardian is deployed when new smart account is created using the AccountFactory::createAccount(...)
+            smartWalletAccount = accountFactory.createAccount(admin, abi.encode("shiven@gmail.com"));
+            vm.stopBroadcast();
         } else {
             // Anvil
             vm.startBroadcast();
