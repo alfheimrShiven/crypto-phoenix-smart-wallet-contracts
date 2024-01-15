@@ -28,8 +28,6 @@ import { Account } from "./Account.sol";
 contract AccountFactory is BaseAccountFactory, ContractMetadata, PermissionsEnumerable {
     // Events //
     event AccountFactoryContractDeployed(address indexed);
-    event CrossChainTokenTransferContractDeployed(address indexed);
-    event CrossChainTokenTransferMasterContractDeployed(address indexed);
 
     /*///////////////////////////////////////////////////////////////
                             Constructor
