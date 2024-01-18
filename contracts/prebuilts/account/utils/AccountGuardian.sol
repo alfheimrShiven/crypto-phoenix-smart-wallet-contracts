@@ -15,6 +15,7 @@ contract AccountGuardian is IAccountGuardian {
     address payable account;
     address[] private accountGuardians;
     address public owner;
+    uint256 public constant MAX_GUARDIANS = 10;
 
     error NotAuthorized(address sender);
 
@@ -47,27 +48,37 @@ contract AccountGuardian is IAccountGuardian {
     ////////////////////////////
 
     function addGuardian(address guardian) external onlyOwnerAccountLockAccountRecovery {
-        if (guardianContract.isVerifiedGuardian(guardian)) {
+        (bool duplicateGuardian, ) = _checkIfGuardianExists(guardian);
+
+        if (
+            guardianContract.isVerifiedGuardian(guardian) &&
+            accountGuardians.length <= MAX_GUARDIANS &&
+            !duplicateGuardian
+        ) {
             accountGuardians.push(guardian);
             guardianContract.addGuardianToAccount(guardian, owner);
             emit GuardianAdded(guardian);
         } else {
-            revert GuardianNotVerified(guardian);
+            revert GuardianCouldNotBeAdded(guardian);
         }
     }
 
     function removeGuardian(address guardian) external onlyOwnerAccountLockAccountRecovery {
         require(guardian != address(0), "guardian address being removed cannot be a zero address");
 
-        bool guardianFound = false;
-        for (uint256 g = 0; g < accountGuardians.length; g++) {
-            if (accountGuardians[g] == guardian) {
-                guardianFound = true;
-                delete accountGuardians[g];
-                emit GuardianRemoved(guardian);
+        (bool guardianFound, uint256 g) = _checkIfGuardianExists(guardian);
+
+        if (guardianFound) {
+            // replacing the guardian at index `g` with the last element of accountGuardians followed by poping one element out
+            uint256 length = accountGuardians.length;
+
+            if (g != length - 1) {
+                accountGuardians[g] = accountGuardians[length - 1];
             }
-        }
-        if (!guardianFound) {
+            accountGuardians.pop();
+
+            emit GuardianRemoved(guardian);
+        } else {
             revert NotAGuardian(guardian);
         }
     }
@@ -86,4 +97,12 @@ contract AccountGuardian is IAccountGuardian {
     }
 
     function getTotalGuardians() external view override returns (uint256) {}
+
+    // internal functions //
+    function _checkIfGuardianExists(address guardian) internal returns (bool, uint256) {
+        for (uint256 g = 0; g < accountGuardians.length; g++) {
+            if (accountGuardians[g] == guardian) return (true, g);
+        }
+        return (false, MAX_GUARDIANS); //
+    }
 }

@@ -28,7 +28,7 @@ interface IAccountGuardian {
      * guardian signup dapp.
      * @param guardian address that was not added as a guardian
      */
-    error GuardianNotVerified(address guardian);
+    error GuardianCouldNotBeAdded(address guardian);
 
     /**
      * An error thrown if the guardian the user is trying to remove is not a part of

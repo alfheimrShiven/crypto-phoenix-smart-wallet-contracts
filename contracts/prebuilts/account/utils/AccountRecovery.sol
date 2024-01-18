@@ -34,7 +34,6 @@ contract AccountRecovery is IAccountRecovery {
         emailVerificationServiceAddress = _emailVerificationServiceAddress;
         recoveryEmail = _recoveryEmail;
         account = _account;
-        // accountInterface = IAccount(account);
         accountGuardian = _accountGuardian;
     }
 
