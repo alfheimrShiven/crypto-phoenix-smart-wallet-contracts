@@ -205,14 +205,18 @@ contract AccountLock is IAccountLock {
             console.log("Recovered guardian", recoveredGuardian);
 
             if (recoveredGuardian == guardian) {
+                // case: signature is valid
                 if (_isLocked(account)) {
+                    // checking which request's mapping to alter: lock or unlock request
                     unLockRequestToGuardianToSignatureValid[request][guardian] = true;
                 } else {
                     lockRequestToGuardianToSignatureValid[request][guardian] = true;
                 }
                 validGuardianSignatures++;
             } else {
+                // case: signature is not valid
                 if (_isLocked(account)) {
+                    // checking which request's mapping to alter: lock or unlock request
                     unLockRequestToGuardianToSignatureValid[request][guardian] = false;
                 } else {
                     lockRequestToGuardianToSignatureValid[request][guardian] = false;
