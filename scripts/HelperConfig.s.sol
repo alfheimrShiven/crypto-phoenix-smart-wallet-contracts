@@ -13,9 +13,9 @@ contract HelperConfig is Script {
     NetworkConfig public activeNetworkConfig;
 
     constructor() {
-        if (block.chainid == 11155111)
+        if (block.chainid == 11155111 || block.chainid == 80001)
             activeNetworkConfig = NetworkConfig({
-                networkAccount: vm.envAddress("SEPOLIA_PUBLIC_KEY"),
+                networkAccount: vm.envAddress("MUMBAI_PUBLIC_KEY"),
                 entryPoint: payable(0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789)
             });
         else if (block.chainid == 462)
