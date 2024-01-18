@@ -32,10 +32,10 @@ abstract contract BaseAccountFactory is IAccountFactory, Multicall {
 
     // Events //
 
-    event GuardianContractDeployed(address indexed);
-    event AccountLockContractDeployed(address indexed);
-    event AccountGuardianContractDeployed(address indexed);
-    event SmartAccountContractDeployed(address indexed);
+    event GuardianContractDeployed(address indexed guardian);
+    event AccountLockContractDeployed(address indexed accountLock);
+    event AccountGuardianContractDeployed(address indexed accountGuardian);
+    event SmartAccountContractDeployed(address indexed smartAccount);
 
     /*///////////////////////////////////////////////////////////////
                                 State

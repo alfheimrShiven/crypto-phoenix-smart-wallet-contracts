@@ -46,7 +46,7 @@ contract AccountGuardianTest is Test {
 
     function testRevertOnAddingUnverifiedGuardian() public {
         vm.prank(smartAccount);
-        vm.expectRevert(abi.encodeWithSelector(IAccountGuardian.GuardianNotVerified.selector, randomUser));
+        vm.expectRevert(abi.encodeWithSelector(IAccountGuardian.GuardianCouldNotBeAdded.selector, randomUser));
 
         accountGuardian.addGuardian(randomUser);
     }
@@ -92,7 +92,7 @@ contract AccountGuardianTest is Test {
         // ASSERT
         address[] memory accountGuardians = accountGuardian.getAllGuardians();
         vm.stopPrank();
-        assertEq(accountGuardians[0], address(0)); // the delete function in `removeGuardian()` will remove the guardian address but replace it with a zero address rather than removing the entry.
+        assertEq(accountGuardians.length, 0);
     }
 
     /////////////////////////////

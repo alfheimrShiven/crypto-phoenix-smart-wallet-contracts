@@ -113,16 +113,9 @@ contract AccountLock is IAccountLock {
         }
 
         bytes32 lockRequestHash = keccak256(abi.encodeWithSignature("_lockAccount(address account)", account));
-
         bytes32 ethSignedLockRequestHash = ECDSA.toEthSignedMessageHash(lockRequestHash);
 
         accountToLockRequest[account] = ethSignedLockRequestHash;
-        // lockRequestToCreationTime[ethSignedLockRequestHash] = block.timestamp;
-        // accountRequestConcensusEvaluationStatus[ethSignedLockRequestHash] = false;
-
-        // bytes memory chainlinkUpkeepCheckData = abi.encode(lockRequestHash, account);
-
-        // _registerAndFundUpKeepForEvaluationUsingTimeBasedTrigger(chainlinkUpkeepCheckData);
         return ethSignedLockRequestHash;
     }
 
@@ -245,42 +238,6 @@ contract AccountLock is IAccountLock {
     }
 
     /////////////////////////////////
-    /////// Chainlink Automation /////
-    ////////////////////////////////
-
-    // function checkUpkeep(bytes memory checkData) public view returns (bool upkeepNeeded, bytes memory performData) {
-    //     // assembly {
-    //     //         mstore(add(lockRequest, 0x20), mload(add(checkData, 0x20)))
-    //     //         mstore(add(account, 0x20), mload(add(checkData, 0x40)))
-    //     //     }
-
-    //     (bytes32 lockRequest, address account) = abi.decode(checkData, (bytes32, address));
-
-    //     if (accountRequestConcensusEvaluationStatus[lockRequest]) {
-    //         return (false, checkData);
-    //     }
-
-    //     uint256 lockRequestTimeElapsedSinceCreation = block.timestamp - lockRequestToCreationTime[lockRequest];
-
-    //     if (lockRequestTimeElapsedSinceCreation >= LOCK_REQUEST_TIME_TO_EVALUATION) {
-    //         return (true, checkData);
-    //     } else {
-    //         return (false, checkData);
-    //     }
-    // }
-
-    // function performUpkeep(bytes calldata performData) external {
-    //     (bool upkeepNeeded, bytes memory performData) = checkUpkeep(performData);
-
-    //     if (upkeepNeeded) {
-    //         // retrieving the lockRequest and account address from performData
-    //         (bytes32 lockRequest, address account) = abi.decode(performData, (bytes32, address));
-
-    //         accountRequestConcensusEvaluation(lockRequest, account);
-    //     }
-    // }
-
-    /////////////////////////////////
     /////// View Func //////////////
     ////////////////////////////////
     function activeLockRequestExists(address account) public view returns (bool) {
@@ -374,25 +331,4 @@ contract AccountLock is IAccountLock {
 
         return recoveredGuardian;
     }
-
-    /**
-     * @notice Function to register & fund an upkeep that'll be responsible for evaluating the lock request responses using a time based Chainlink Automation
-     */
-    // function _registerAndFundUpKeepForEvaluationUsingTimeBasedTrigger(bytes memory chainlinkUpkeepCheckData) internal {
-    //     mockLinkToken.transferAndCall(address(chainlinkKeeperRegistrar), FUND_UPKEEP_LINK_TOKEN, "");
-
-    //     KeeperRegistrar2_0Mock.RegistrationParams memory registrationParams = KeeperRegistrar2_0Mock
-    //         .RegistrationParams({
-    //             name: string(abi.encodePacked("Lock Request Upkeep", chainlinkUpkeepCheckData)),
-    //             encryptedEmail: new bytes(0),
-    //             upkeepContract: address(this),
-    //             gasLimit: 500000,
-    //             adminAddress: address(0x689EcF264657302052c3dfBD631e4c20d3ED0baB),
-    //             checkData: chainlinkUpkeepCheckData,
-    //             offchainConfig: new bytes(0),
-    //             amount: 5e18
-    //         });
-
-    //     chainlinkKeeperRegistrar.registerUpkeep(registrationParams);
-    // }
 }
