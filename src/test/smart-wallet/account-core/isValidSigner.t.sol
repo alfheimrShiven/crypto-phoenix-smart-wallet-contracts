@@ -60,7 +60,7 @@ contract MyDynamicAccount is DynamicAccount {
         }
     }
 
-    function _setAdmin(address _account, bool _isAdmin, bytes memory _data) internal virtual override {
+    function _setAdmin(address _account, bool _isAdmin) internal virtual override {
         _accountPermissionsStorage().isAdmin[_account] = _isAdmin;
     }
 
@@ -191,14 +191,14 @@ contract AccountCoreTest_isValidSigner is BaseTest {
         IExtension.Extension[] memory extensions;
 
         // deploy account factory
-        accountFactory = new DynamicAccountFactory(IEntryPoint(payable(address(entrypoint))), extensions);
+        accountFactory = new DynamicAccountFactory(deployer, extensions);
         // deploy dummy contract
         numberContract = new Number();
 
         address accountImpl = address(new MyDynamicAccount(IEntryPoint(payable(address(entrypoint))), extensions));
         address _account = Clones.cloneDeterministic(accountImpl, "salt");
         account = MyDynamicAccount(payable(_account));
-        account.initialize(accountAdmin, address(0), address(0), "");
+        account.initialize(accountAdmin, "");
     }
 
     function test_isValidSigner_whenSignerIsAdmin() public {

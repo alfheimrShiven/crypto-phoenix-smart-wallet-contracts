@@ -26,24 +26,15 @@ import { Account } from "./Account.sol";
 //    \____/ \__|  \__|\__|\__|       \_______| \_____\____/  \_______|\_______/
 
 contract AccountFactory is BaseAccountFactory, ContractMetadata, PermissionsEnumerable {
-    // Events //
-    event AccountFactoryContractDeployed(address indexed accountFactory);
-
     /*///////////////////////////////////////////////////////////////
                             Constructor
     //////////////////////////////////////////////////////////////*/
 
     constructor(
+        address _defaultAdmin,
         IEntryPoint _entrypoint
     ) BaseAccountFactory(address(new Account(_entrypoint, address(this))), address(_entrypoint)) {
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-
-        emit AccountFactoryContractDeployed(address(this));
-    }
-
-    ///@dev  returns Account lock contract details
-    function getAccountLock() external view returns (address) {
-        return (address(accountLock));
+        _setupRole(DEFAULT_ADMIN_ROLE, _defaultAdmin);
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -51,13 +42,8 @@ contract AccountFactory is BaseAccountFactory, ContractMetadata, PermissionsEnum
     //////////////////////////////////////////////////////////////*/
 
     /// @dev Called in `createAccount`. Initializes the account contract created in `createAccount`.
-    function _initializeAccount(
-        address _account,
-        address _admin,
-        address commonGuardian,
-        bytes calldata _data
-    ) internal override {
-        Account(payable(_account)).initialize(_admin, commonGuardian, address(accountLock), _data);
+    function _initializeAccount(address _account, address _admin, bytes calldata _data) internal override {
+        Account(payable(_account)).initialize(_admin, _data);
     }
 
     /// @dev Returns whether contract metadata can be set in the given execution context.

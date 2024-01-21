@@ -11,11 +11,11 @@ import { IAccountLock } from "contracts/prebuilts/account/interface/IAccountLock
 import { AccountGuardian } from "contracts/prebuilts/account/utils/AccountGuardian.sol";
 import { IAccountLock } from "contracts/prebuilts/account/interface/IAccountLock.sol";
 import { Guardian } from "contracts/prebuilts/account/utils/Guardian.sol";
-import { AccountFactory } from "contracts/prebuilts/account/non-upgradeable/AccountFactory.sol";
+import { GuardianAccountFactory } from "contracts/prebuilts/account/guardian/GuardianAccountFactory.sol";
 import { DeploySmartAccountUtilContracts } from "scripts/DeploySmartAccountUtilContracts.s.sol";
 
 contract AccountLockTest is Test {
-    AccountFactory public accountFactory;
+    GuardianAccountFactory public guardianAccountFactory;
     address public account;
     Guardian public guardianContract;
     AccountLock public accountLock;
@@ -36,9 +36,9 @@ contract AccountLockTest is Test {
 
         deployer = new DeploySmartAccountUtilContracts();
 
-        (account, accountFactory, guardianContract, accountLock, , ) = deployer.run();
+        (account, guardianAccountFactory, guardianContract, accountLock, , ) = deployer.run();
 
-        account = accountFactory.createAccount(admin, abi.encode("shiven@gmail.com"));
+        account = guardianAccountFactory.createAccount(admin, abi.encode("shiven@gmail.com"));
         accountGuardian = AccountGuardian(guardianContract.getAccountGuardian(account));
         vm.deal(guardian, GUARDIAN_STARTING_BALANCE);
     }

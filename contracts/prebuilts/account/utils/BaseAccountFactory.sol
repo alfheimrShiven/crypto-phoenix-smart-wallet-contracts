@@ -13,11 +13,6 @@ import "../../../lib/BytesLib.sol";
 import "../interface/IEntrypoint.sol";
 import "../interface/IAccountFactory.sol";
 
-import { AccountLock } from "../utils/AccountLock.sol";
-import { Guardian } from "../utils/Guardian.sol";
-import { AccountGuardian } from "../utils/AccountGuardian.sol";
-import { AccountRecovery } from "../utils/AccountRecovery.sol";
-
 //   $$\     $$\       $$\                 $$\                         $$\
 //   $$ |    $$ |      \__|                $$ |                        $$ |
 // $$$$$$\   $$$$$$$\  $$\  $$$$$$\   $$$$$$$ |$$\  $$\  $$\  $$$$$$\  $$$$$$$\
@@ -30,24 +25,13 @@ import { AccountRecovery } from "../utils/AccountRecovery.sol";
 abstract contract BaseAccountFactory is IAccountFactory, Multicall {
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    // Events //
-
-    event GuardianContractDeployed(address indexed guardian);
-    event AccountLockContractDeployed(address indexed accountLock);
-    event AccountGuardianContractDeployed(address indexed accountGuardian);
-    event SmartAccountContractDeployed(address indexed smartAccount);
-
     /*///////////////////////////////////////////////////////////////
                                 State
     //////////////////////////////////////////////////////////////*/
 
     address public immutable accountImplementation;
     address public immutable entrypoint;
-    address private constant emailService = address(0xa0Ee7A142d267C1f36714E4a8F75612F20a79720); // TODO: To be updated with the wallet address of the actual email service
-    Guardian public guardian;
-    AccountLock public accountLock;
-    AccountGuardian public accountGuardian;
-    AccountRecovery public accountRecovery;
+
     EnumerableSet.AddressSet private allAccounts;
     mapping(address => EnumerableSet.AddressSet) internal accountsOfSigner;
 
@@ -58,13 +42,6 @@ abstract contract BaseAccountFactory is IAccountFactory, Multicall {
     constructor(address _accountImpl, address _entrypoint) {
         accountImplementation = _accountImpl;
         entrypoint = _entrypoint;
-        guardian = new Guardian();
-        accountLock = new AccountLock(guardian);
-
-        // emit the contract addresses
-        emit SmartAccountContractDeployed(_accountImpl);
-        emit GuardianContractDeployed(address(guardian));
-        emit AccountLockContractDeployed(address(accountLock));
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -72,11 +49,9 @@ abstract contract BaseAccountFactory is IAccountFactory, Multicall {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Deploys a new Account for admin.
-    function createAccount(address _admin, bytes calldata _email) external virtual override returns (address) {
+    function createAccount(address _admin, bytes calldata _data) external virtual override returns (address) {
         address impl = accountImplementation;
-        string memory recoveryEmail = abi.decode(_email, (string));
-        bytes32 salt = _generateSalt(_email);
-
+        bytes32 salt = _generateSalt(_admin, _data);
         address account = Clones.predictDeterministicAddress(impl, salt);
 
         if (account.code.length > 0) {
@@ -89,29 +64,24 @@ abstract contract BaseAccountFactory is IAccountFactory, Multicall {
             require(allAccounts.add(account), "AccountFactory: account already registered");
         }
 
-        _initializeAccount(account, _admin, address(guardian), _email);
+        _initializeAccount(account, _admin, _data);
+
         emit AccountCreated(account, _admin);
-
-        accountGuardian = new AccountGuardian(guardian, accountLock, payable(account), emailService, recoveryEmail);
-
-        guardian.linkAccountToAccountGuardian(account, address(accountGuardian));
-
-        emit AccountGuardianContractDeployed(address(accountGuardian));
 
         return account;
     }
 
     /// @notice Callback function for an Account to register itself on the factory.
-    function onRegister(address _defaultAdmin, bytes memory _data) external {
+    function onRegister(bytes32 _salt) external {
         address account = msg.sender;
-        require(_isAccountOfFactory(account, _data), "AccountFactory: not an account.");
+        require(_isAccountOfFactory(account, _salt), "AccountFactory: not an account.");
 
         require(allAccounts.add(account), "AccountFactory: account already registered");
     }
 
-    function onSignerAdded(address _signer, address _defaultAdmin, bytes memory _data) external {
+    function onSignerAdded(address _signer, bytes32 _salt) external {
         address account = msg.sender;
-        require(_isAccountOfFactory(account, _data), "AccountFactory: not an account.");
+        require(_isAccountOfFactory(account, _salt), "AccountFactory: not an account.");
 
         bool isNewSigner = accountsOfSigner[_signer].add(account);
 
@@ -121,9 +91,9 @@ abstract contract BaseAccountFactory is IAccountFactory, Multicall {
     }
 
     /// @notice Callback function for an Account to un-register its signers.
-    function onSignerRemoved(address _signer, address _defaultAdmin, bytes memory _data) external {
+    function onSignerRemoved(address _signer, bytes32 _salt) external {
         address account = msg.sender;
-        require(_isAccountOfFactory(account, _data), "AccountFactory: not an account.");
+        require(_isAccountOfFactory(account, _salt), "AccountFactory: not an account.");
 
         bool isAccount = accountsOfSigner[_signer].remove(account);
 
@@ -141,6 +111,23 @@ abstract contract BaseAccountFactory is IAccountFactory, Multicall {
         return allAccounts.contains(_account);
     }
 
+    /// @notice Returns the total number of accounts.
+    function totalAccounts() external view returns (uint256) {
+        return allAccounts.length();
+    }
+
+    /// @notice Returns all accounts between the given indices.
+    function getAccounts(uint256 _start, uint256 _end) external view returns (address[] memory accounts) {
+        require(_start < _end && _end <= allAccounts.length(), "BaseAccountFactory: invalid indices");
+
+        uint256 len = _end - _start;
+        accounts = new address[](_end - _start);
+
+        for (uint256 i = 0; i < len; i += 1) {
+            accounts[i] = allAccounts.at(i + _start);
+        }
+    }
+
     /// @notice Returns all accounts created on the factory.
     function getAllAccounts() external view returns (address[] memory) {
         return allAccounts.values();
@@ -148,7 +135,7 @@ abstract contract BaseAccountFactory is IAccountFactory, Multicall {
 
     /// @notice Returns the address of an Account that would be deployed with the given admin signer.
     function getAddress(address _adminSigner, bytes calldata _data) public view returns (address) {
-        bytes32 salt = _generateSalt(_data);
+        bytes32 salt = _generateSalt(_adminSigner, _data);
         return Clones.predictDeterministicAddress(accountImplementation, salt);
     }
 
@@ -162,9 +149,8 @@ abstract contract BaseAccountFactory is IAccountFactory, Multicall {
     //////////////////////////////////////////////////////////////*/
 
     /// @dev Returns whether the caller is an account deployed by this factory.
-    function _isAccountOfFactory(address _account, bytes memory _data) internal view virtual returns (bool) {
-        bytes32 salt = _generateSalt(_data);
-        address predicted = Clones.predictDeterministicAddress(accountImplementation, salt);
+    function _isAccountOfFactory(address _account, bytes32 _salt) internal view virtual returns (bool) {
+        address predicted = Clones.predictDeterministicAddress(accountImplementation, _salt);
         return _account == predicted;
     }
 
@@ -174,15 +160,10 @@ abstract contract BaseAccountFactory is IAccountFactory, Multicall {
     }
 
     /// @dev Returns the salt used when deploying an Account.
-    function _generateSalt(bytes memory _data) internal view virtual returns (bytes32) {
-        return keccak256(_data);
+    function _generateSalt(address _admin, bytes memory _data) internal view virtual returns (bytes32) {
+        return keccak256(abi.encode(_admin, _data));
     }
 
     /// @dev Called in `createAccount`. Initializes the account contract created in `createAccount`.
-    function _initializeAccount(
-        address _account,
-        address _admin,
-        address guardian,
-        bytes calldata _data
-    ) internal virtual;
+    function _initializeAccount(address _account, address _admin, bytes calldata _data) internal virtual;
 }

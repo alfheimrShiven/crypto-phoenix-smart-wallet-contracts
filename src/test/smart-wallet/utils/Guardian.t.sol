@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.12;
 
-import { AccountFactory } from "contracts/prebuilts/account/non-upgradeable/AccountFactory.sol";
+import { GuardianAccountFactory } from "contracts/prebuilts/account/guardian/GuardianAccountFactory.sol";
 import { Guardian } from "contracts/prebuilts/account/utils/Guardian.sol";
 import { IGuardian } from "contracts/prebuilts/account/interface/IGuardian.sol";
 import { Test } from "forge-std/Test.sol";
@@ -10,7 +10,7 @@ import { DeploySmartAccountUtilContracts } from "scripts/DeploySmartAccountUtilC
 contract GuardianTest is Test {
     Guardian public guardian;
     address account;
-    AccountFactory factory;
+    GuardianAccountFactory factory;
     DeploySmartAccountUtilContracts deployer;
     address public user = makeAddr("guardianUser");
     uint256 public STARTING_USER_BALANCE = 10 ether;

@@ -27,6 +27,7 @@ contract ManagedAccountFactory is BaseAccountFactory, ContractMetadata, Permissi
     //////////////////////////////////////////////////////////////*/
 
     constructor(
+        address _defaultAdmin,
         IEntryPoint _entrypoint,
         Extension[] memory _defaultExtensions
     )
@@ -34,10 +35,10 @@ contract ManagedAccountFactory is BaseAccountFactory, ContractMetadata, Permissi
         BaseAccountFactory(payable(address(new ManagedAccount(_entrypoint, address(this)))), address(_entrypoint))
     {
         __BaseRouter_init();
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(DEFAULT_ADMIN_ROLE, _defaultAdmin);
 
         bytes32 _extensionRole = keccak256("EXTENSION_ROLE");
-        _setupRole(_extensionRole, msg.sender);
+        _setupRole(_extensionRole, _defaultAdmin);
         _setRoleAdmin(_extensionRole, _extensionRole);
     }
 
@@ -46,13 +47,8 @@ contract ManagedAccountFactory is BaseAccountFactory, ContractMetadata, Permissi
     //////////////////////////////////////////////////////////////*/
 
     /// @dev Called in `createAccount`. Initializes the account contract created in `createAccount`.
-    function _initializeAccount(
-        address _account,
-        address _admin,
-        address _commonGuardian,
-        bytes calldata _data
-    ) internal override {
-        ManagedAccount(payable(_account)).initialize(_admin, _commonGuardian, address(accountLock), _data);
+    function _initializeAccount(address _account, address _admin, bytes calldata _data) internal override {
+        ManagedAccount(payable(_account)).initialize(_admin, _data);
     }
 
     /// @dev Returns whether all relevant permission and other checks are met before any upgrade.
