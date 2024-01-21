@@ -177,11 +177,16 @@ contract AccountRecoveryTest is Test {
         accountRecovery.collectGuardianSignaturesOnRecoveryRequest(secondGuard, secondGuardSignature);
 
         // checking if the smart account admin/owner was updated
-        (bool success, bytes memory currentAdminEncoded) = smartWallet.call(
-            abi.encodeWithSignature("getAccountAdmin()")
-        );
+        (bool success, bytes memory allAdminsArray) = smartWallet.call(abi.encodeWithSignature("getAccountAdmin()"));
 
-        address currentAdmin = abi.decode(currentAdminEncoded, (address));
+        address[] memory allAdmins = abi.decode(allAdminsArray, (address[]));
+        address currentAdmin;
+
+        for (uint256 a = 0; a < allAdmins.length; a++) {
+            if (allAdmins[a] == newEmbeddedWallet) {
+                currentAdmin = allAdmins[a];
+            }
+        }
         assertEq(currentAdmin, newEmbeddedWallet);
     }
 }

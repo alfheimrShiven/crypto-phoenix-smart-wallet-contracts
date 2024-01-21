@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 // Test utils
 import "../utils/BaseTest.sol";
+import { TWProxy } from "contracts/infra/TWProxy.sol";
 
 // Account Abstraction setup for smart wallets.
 import { EntryPoint, IEntryPoint } from "contracts/prebuilts/account/utils/Entrypoint.sol";
@@ -12,6 +13,7 @@ import { UserOperation } from "contracts/prebuilts/account/utils/UserOperation.s
 import { IAccountPermissions } from "contracts/extension/interface/IAccountPermissions.sol";
 import { AccountFactory } from "contracts/prebuilts/account/non-upgradeable/AccountFactory.sol";
 import { Account as SimpleAccount } from "contracts/prebuilts/account/non-upgradeable/Account.sol";
+import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /// @dev This is a dummy contract to test contract interactions with Account.
 contract Number {
@@ -49,7 +51,7 @@ contract AccountBenchmarkTest is BaseTest {
     address private nonSigner;
 
     // UserOp terminology: `sender` is the smart wallet.
-    address private sender = 0xBB956D56140CA3f3060986586A2631922a4B347E;
+    address private sender = 0x0df2C3523703d165Aa7fA1a552f3F0B56275DfC6;
     address payable private beneficiary = payable(address(0x45654));
 
     bytes32 private uidCache = bytes32("random uid");
@@ -178,9 +180,8 @@ contract AccountBenchmarkTest is BaseTest {
 
         // Setup contracts
         entrypoint = new EntryPoint();
-
         // deploy account factory
-        accountFactory = new AccountFactory(IEntryPoint(payable(address(entrypoint))));
+        accountFactory = new AccountFactory(deployer, IEntryPoint(payable(address(entrypoint))));
         // deploy dummy contract
         numberContract = new Number();
     }

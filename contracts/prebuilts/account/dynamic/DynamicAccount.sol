@@ -31,15 +31,10 @@ contract DynamicAccount is AccountCore, BaseRouter {
     }
 
     /// @notice Initializes the smart contract wallet.
-    function initialize(
-        address _defaultAdmin,
-        address _commonGuardian,
-        address _accountLock,
-        bytes calldata
-    ) public override initializer {
+    function initialize(address _defaultAdmin, bytes calldata _data) public override initializer {
         __BaseRouter_init();
-        AccountCoreStorage.data().firstAdmin = _defaultAdmin;
-        _setAdmin(_defaultAdmin, true, "");
+        AccountCoreStorage.data().creationSalt = _generateSalt(_defaultAdmin, _data);
+        _setAdmin(_defaultAdmin, true);
     }
 
     /*///////////////////////////////////////////////////////////////

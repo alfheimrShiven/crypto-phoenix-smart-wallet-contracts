@@ -18,7 +18,10 @@ import "../../../external-deps/openzeppelin/token/ERC1155/utils/ERC1155Holder.so
 import "../../../eip/ERC1271.sol";
 import "../utils/Helpers.sol";
 import "../../../external-deps/openzeppelin/utils/cryptography/ECDSA.sol";
-import "../utils/BaseAccountFactory.sol";
+import "forge-std/console.sol";
+import { GuardianAccountFactory } from "./GuardianAccountFactory.sol";
+import { Guardian } from "../utils/Guardian.sol";
+import { AccountLock } from "../utils/AccountLock.sol";
 
 //   $$\     $$\       $$\                 $$\                         $$\
 //   $$ |    $$ |      \__|                $$ |                        $$ |
@@ -29,21 +32,46 @@ import "../utils/BaseAccountFactory.sol";
 //   \$$$$  |$$ |  $$ |$$ |$$ |      \$$$$$$$ |\$$$$$\$$$$  |\$$$$$$$\ $$$$$$$  |
 //    \____/ \__|  \__|\__|\__|       \_______| \_____\____/  \_______|\_______/
 
-contract Account is AccountCore, ContractMetadata, ERC1271, ERC721Holder, ERC1155Holder {
+contract GuardianAccount is AccountCore, ContractMetadata, ERC1271, ERC721Holder, ERC1155Holder {
     using ECDSA for bytes32;
     using EnumerableSet for EnumerableSet.AddressSet;
+    bool public paused;
+    Guardian guardian;
 
-    bytes32 private constant MSG_TYPEHASH = keccak256("AccountMessage(bytes message)");
+    error NotAuthorizedToLock(address locker, address accountLock);
 
     /*///////////////////////////////////////////////////////////////
                     Constructor, Initializer, Modifiers
     //////////////////////////////////////////////////////////////*/
 
-    constructor(IEntryPoint _entrypoint, address _factory) AccountCore(_entrypoint, _factory) {}
+    constructor(IEntryPoint _entrypoint, address _factory) AccountCore(_entrypoint, _factory) {
+        paused = false;
+    }
 
     /// @notice Checks whether the caller is the EntryPoint contract or the admin.
     modifier onlyAdminOrEntrypoint() virtual {
         require(msg.sender == address(entryPoint()) || isAdmin(msg.sender), "Account: not admin or EntryPoint.");
+        _;
+    }
+
+    /// @notice The account can be paused only by the AccountLock contract
+    modifier onlyAccountLock(address locker) {
+        if (locker != accountLock) {
+            revert NotAuthorizedToLock(locker, accountLock);
+        }
+        _;
+    }
+
+    modifier onlyAccountRecovery(address sender) {
+        if (Guardian(commonGuardian).getAccountRecovery(address(this)) != sender) {
+            revert("Only Account Recovery Contract allowed to update admin");
+        }
+        _;
+    }
+
+    /// @notice Will check if the Account transactions has been paused by the guardians. If paused, it will not allow the `execute(..)` or the `executeBatch(..)` function to run.
+    modifier whenNotPaused() {
+        require(!paused, "Smart account has been paused.");
         _;
     }
 
@@ -64,11 +92,10 @@ contract Account is AccountCore, ContractMetadata, ERC1271, ERC721Holder, ERC115
 
     /// @notice See EIP-1271
     function isValidSignature(
-        bytes32 _message,
+        bytes32 _hash,
         bytes memory _signature
     ) public view virtual override returns (bytes4 magicValue) {
-        bytes32 messageHash = getMessageHash(abi.encode(_message));
-        address signer = messageHash.recover(_signature);
+        address signer = _hash.recover(_signature);
 
         if (isAdmin(signer)) {
             return MAGICVALUE;
@@ -87,22 +114,16 @@ contract Account is AccountCore, ContractMetadata, ERC1271, ERC721Holder, ERC115
         }
     }
 
-    /**
-     * @notice Returns the hash of message that should be signed for EIP1271 verification.
-     * @param message Message to be hashed i.e. `keccak256(abi.encode(data))`
-     * @return Hashed message
-     */
-    function getMessageHash(bytes memory message) public view returns (bytes32) {
-        bytes32 messageHash = keccak256(abi.encode(MSG_TYPEHASH, keccak256(message)));
-        return keccak256(abi.encodePacked("\x19\x01", _domainSeparatorV4(), messageHash));
-    }
-
     /*///////////////////////////////////////////////////////////////
                             External functions
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Executes a transaction (called directly from an admin, or by entryPoint)
-    function execute(address _target, uint256 _value, bytes calldata _calldata) external virtual onlyAdminOrEntrypoint {
+    function execute(
+        address _target,
+        uint256 _value,
+        bytes calldata _calldata
+    ) external virtual onlyAdminOrEntrypoint whenNotPaused {
         _registerOnFactory();
         _call(_target, _value, _calldata);
     }
@@ -112,7 +133,7 @@ contract Account is AccountCore, ContractMetadata, ERC1271, ERC721Holder, ERC115
         address[] calldata _target,
         uint256[] calldata _value,
         bytes[] calldata _calldata
-    ) external virtual onlyAdminOrEntrypoint {
+    ) external virtual onlyAdminOrEntrypoint whenNotPaused {
         _registerOnFactory();
 
         require(_target.length == _calldata.length && _target.length == _value.length, "Account: wrong array lengths.");
@@ -121,15 +142,38 @@ contract Account is AccountCore, ContractMetadata, ERC1271, ERC721Holder, ERC115
         }
     }
 
+    function setPaused(bool pauseStatus) external onlyAccountLock(msg.sender) {
+        paused = pauseStatus;
+        AccountLock(accountLock).addLockAccountToList(address(this));
+    }
+
+    /// @notice Updates the account admin (post recovery concensus)
+    function updateAdmin(address newAdmin) external onlyAccountRecovery(msg.sender) {
+        // retrieving `recoveryEmailData` from `AccountCore::recoveryEmailData` passed during initialization of smart account contract
+        _setAdmin(newAdmin, true, recoveryEmailData);
+
+        emit AdminUpdated(newAdmin);
+    }
+
+    ////// getter functions ////////
+    function getAccountAdmin() public view returns (address[] memory) {
+        address[] memory admins = getAllAdmins();
+        return admins;
+    }
+
+    fallback() external {
+        console.log("Reached Fallback() of Account.sol");
+    }
+
     /*///////////////////////////////////////////////////////////////
                         Internal functions
     //////////////////////////////////////////////////////////////*/
 
     /// @dev Registers the account on the factory if it hasn't been registered yet.
     function _registerOnFactory() internal virtual {
-        BaseAccountFactory factoryContract = BaseAccountFactory(factory);
+        GuardianAccountFactory factoryContract = GuardianAccountFactory(factory);
         if (!factoryContract.isRegistered(address(this))) {
-            factoryContract.onRegister(AccountCoreStorage.data().creationSalt);
+            factoryContract.onRegister(address(this), "");
         }
     }
 
@@ -151,5 +195,33 @@ contract Account is AccountCore, ContractMetadata, ERC1271, ERC721Holder, ERC115
     /// @dev Returns whether contract metadata can be set in the given execution context.
     function _canSetContractURI() internal view virtual override returns (bool) {
         return isAdmin(msg.sender) || msg.sender == address(this);
+    }
+
+    /// @notice Initializes the smart contract wallet.
+    function initialize(
+        address _defaultAdmin,
+        address _guardian,
+        address _accountLock,
+        bytes calldata _data
+    ) public initializer {
+        // This is passed as data in the `_registerOnFactory()` call in `AccountExtension` / `Account`.
+        // AccountCoreStorage.data().firstAdmin = _defaultAdmin;
+        _setAdmin(_defaultAdmin, true, _data);
+        commonGuardian = _guardian;
+        accountLock = _accountLock;
+        recoveryEmailData = _data;
+    }
+
+    /// @notice Makes the given account an admin.
+    function _setAdmin(address _account, bool _isAdmin, bytes memory _data) internal {
+        AccountPermissions._setAdmin(_account, _isAdmin);
+
+        if (factory.code.length > 0) {
+            if (_isAdmin) {
+                GuardianAccountFactory(factory).onSignerAdded(_account, _account, _data);
+            } else {
+                GuardianAccountFactory(factory).onSignerRemoved(_account, _account, _data);
+            }
+        }
     }
 }
