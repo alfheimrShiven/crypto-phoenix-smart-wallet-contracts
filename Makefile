@@ -54,3 +54,6 @@ deploy_smart_wallet_factory:
 
 deploy_entrypoint:
 	@forge script scripts/DeployEntryPoint.s.sol:DeployEntryPointContract $(NETWORK_ARGS)
+
+test_CrossChainSender:
+	@forge test --mt testTransferTokensPayNative --rpc-url $(SEPOLIA_RPC_URL) -vvvv

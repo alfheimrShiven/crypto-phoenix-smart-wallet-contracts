@@ -126,6 +126,11 @@ contract GuardianAccountFactory is BaseAccountFactory, ContractMetadata, Permiss
         }
     }
 
+    ///@dev  returns Account lock contract details
+    function getAccountLock() external view returns (address) {
+        return (address(accountLock));
+    }
+
     /*///////////////////////////////////////////////////////////////
                         Internal functions
     //////////////////////////////////////////////////////////////*/
@@ -154,11 +159,6 @@ contract GuardianAccountFactory is BaseAccountFactory, ContractMetadata, Permiss
     /// @dev Returns the salt used when deploying an Account.
     function _generateSalt(bytes memory _data) internal view virtual returns (bytes32) {
         return keccak256(_data);
-    }
-
-    ///@dev  returns Account lock contract details
-    function getAccountLock() external view returns (address) {
-        return (address(accountLock));
     }
 
     function _initializeAccount(address _account, address _admin, bytes calldata _data) internal virtual override {}
