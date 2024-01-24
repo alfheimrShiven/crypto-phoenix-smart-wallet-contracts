@@ -56,4 +56,4 @@ deploy_entrypoint:
 	@forge script scripts/DeployEntryPoint.s.sol:DeployEntryPointContract $(NETWORK_ARGS)
 
 test_CrossChainSender:
-	@forge test --mc CrossChainSender --rpc-url $(SEPOLIA_RPC_URL) -vvvv
+	@forge test --mt testTransferTokensPayNative --rpc-url $(SEPOLIA_RPC_URL) -vvvv

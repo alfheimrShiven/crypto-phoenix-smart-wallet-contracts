@@ -12,8 +12,8 @@ contract CrossChainSender is OwnerIsCreator {
     // Custom errors to provide more descriptive revert messages.
     error NotEnoughBalance(uint256 currentBalance, uint256 calculatedFees); // Used to make sure contract has enough balance to cover the fees.
     error NothingToWithdraw(); // Used when trying to withdraw Ether but there's nothing to withdraw.
-    error NotEnoughBalanceSent(uint256 currentBalance, uint256 calculatedFees);
-    error TransferTokenUserBalInsufficient(uint256 tokensToTransfer, uint256 transferTokenBalanceOfUser);
+    error NotEnoughFeesSent(uint256 currentBalance, uint256 calculatedFees);
+    error TransferTokenApprovedByUserInsufficient(uint256 tokensToTransfer, uint256 transferTokenBalanceOfUser);
     error ApprovedLinkAmountInsufficient(uint256 approvedAmount, uint256 expectedAmount);
     error FailedToWithdrawEth(address owner, address target, uint256 value); // Used when the withdrawal of Ether fails.
     error DestinationChainNotAllowlisted(uint64 destinationChainSelector); // Used when the destination chain has not been allowlisted by the contract owner.
@@ -35,12 +35,6 @@ contract CrossChainSender is OwnerIsCreator {
     mapping(uint64 => bool) public allowlistedChains;
     mapping(address sender => mapping(address token => uint256 tokenAmount)) private senderToTokenToTokenAmount;
     IRouterClient private s_router;
-
-    struct TokenParams {
-        address _token;
-        address _receiver;
-        uint _tokenAmount;
-    }
 
     address public nativeToken;
 
@@ -103,15 +97,10 @@ contract CrossChainSender is OwnerIsCreator {
     /// @return messageId The ID of the message that was sent.
     function transferTokensPayNative(
         uint64 _destinationChainSelector,
-        address _sender,
-        TokenParams memory _tokenParams
+        address receiver,
+        address transferToken,
+        uint256 transferAmount
     ) external payable onlyAllowlistedChain(_destinationChainSelector) returns (bytes32 messageId) {
-        // (address receiver, address transferToken, uint256 transferAmount) = _tokenParams(); // @ques IDK why this destructuring isnt valid
-
-        address receiver = _tokenParams._receiver;
-        address transferToken = _tokenParams._token;
-        uint256 transferAmount = _tokenParams._tokenAmount;
-
         // CHECKS
         // Create an EVM2AnyMessage struct in memory with necessary information for sending a cross-chain message
         Client.EVM2AnyMessage memory evm2AnyMessage = _buildCCIPMessage(
@@ -123,35 +112,39 @@ contract CrossChainSender is OwnerIsCreator {
 
         // Get the fee required to send the message
         uint256 fees = s_router.getFee(_destinationChainSelector, evm2AnyMessage);
-        // Get the sender's balance of the token they want to transfer
-        uint256 senderBalanceOfTransferToken = IERC20(transferToken).balanceOf(msg.sender);
-
-        //verify enough transfer token is there with the sender
-        if (senderBalanceOfTransferToken < transferAmount)
-            revert TransferTokenUserBalInsufficient(transferAmount, senderBalanceOfTransferToken);
 
         //verify native amount sent is enough
-        if (fees > msg.value) revert NotEnoughBalanceSent(msg.value, fees);
+        if (fees > msg.value) revert NotEnoughFeesSent(msg.value, fees);
+
+        // Get the sender's balance of the token they want to transfer
+        // transfer the approved tokens from user
+        IERC20(transferToken).transferFrom(msg.sender, address(this), transferAmount);
+
+        uint256 transferTokenReceivedFromSender = IERC20(transferToken).balanceOf(address(this));
+
+        senderToTokenToTokenAmount[msg.sender][transferToken] = transferTokenReceivedFromSender; // recording token deposit amount
+
+        //verify enough transfer token were approved by the user to the contract
+        if (transferTokenReceivedFromSender < transferAmount)
+            revert TransferTokenApprovedByUserInsufficient(transferAmount, transferTokenReceivedFromSender);
 
         // EFFECTS
-        //transfer token from user to contract
-        IERC20(transferToken).transferFrom(_sender, address(this), transferAmount);
-        senderToTokenToTokenAmount[_sender][transferToken] = transferAmount; // recording token deposit amount
 
-        // approve the Router to spend tokens on contract's behalf. It will spend the amount of the given token
+        // approve the Router to spend tokens on contract's behalf.
         IERC20(transferToken).approve(address(s_router), transferAmount);
 
         // Send the message through the router and store the returned message ID
         messageId = s_router.ccipSend{ value: fees }(_destinationChainSelector, evm2AnyMessage);
 
-        senderToTokenToTokenAmount[_sender][transferToken] = 0; // updating mapping after transfer
+        senderToTokenToTokenAmount[msg.sender][transferToken] = transferTokenReceivedFromSender - transferAmount; // updating mapping after transfer
+
         // Emit an event with message details
         emit TokensTransferred(
             messageId,
             _destinationChainSelector,
-            _tokenParams._receiver,
-            _tokenParams._token,
-            _tokenParams._tokenAmount,
+            receiver,
+            transferToken,
+            transferAmount,
             address(0),
             fees
         );
@@ -160,7 +153,7 @@ contract CrossChainSender is OwnerIsCreator {
         if (msg.value > fees) {
             uint extraFee = msg.value - fees;
             //send the balance to user
-            (bool sent, ) = _sender.call{ value: extraFee }("");
+            (bool sent, ) = (msg.sender).call{ value: extraFee }("");
             require(sent, "Failed to refund user");
         }
 
