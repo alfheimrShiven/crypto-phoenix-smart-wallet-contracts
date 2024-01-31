@@ -5,8 +5,7 @@ pragma solidity ^0.8.12;
 import "../utils/BaseAccountFactory.sol";
 import "../utils/BaseAccount.sol";
 import "../../../external-deps/openzeppelin/proxy/Clones.sol";
-import { Guardian } from "../utils/Guardian.sol";
-import { AccountLock } from "../utils/AccountLock.sol";
+import { DeployGuardianInfra } from "./DeployGuardianInfra.sol";
 import { AccountGuardian } from "../utils/AccountGuardian.sol";
 
 // Extensions
@@ -28,21 +27,16 @@ import { GuardianAccount } from "./GuardianAccount.sol";
 //   \$$$$  |$$ |  $$ |$$ |$$ |      \$$$$$$$ |\$$$$$\$$$$  |\$$$$$$$\ $$$$$$$  |
 //    \____/ \__|  \__|\__|\__|       \_______| \_____\____/  \_______|\_______/
 
-contract GuardianAccountFactory is BaseAccountFactory, ContractMetadata, PermissionsEnumerable {
+contract GuardianAccountFactory is BaseAccountFactory, ContractMetadata, PermissionsEnumerable, DeployGuardianInfra {
     using EnumerableSet for EnumerableSet.AddressSet;
-
-    // states
-    EnumerableSet.AddressSet private allAccounts;
-    address private constant emailService = address(0xa0Ee7A142d267C1f36714E4a8F75612F20a79720); // TODO: To be updated with the wallet address of the actual email service
-    Guardian public guardian;
-    AccountLock public accountLock;
-    AccountGuardian public accountGuardian;
 
     // Events //
     event GuardianAccountFactoryContractDeployed(address indexed accountFactory);
-    event GuardianContractDeployed(address indexed guardianContract);
-    event AccountLockContractDeployed(address indexed accountLockContract);
     event AccountGuardianContractDeployed(address indexed accountGuardianContract);
+
+    // states
+    address private constant emailService = address(0xa0Ee7A142d267C1f36714E4a8F75612F20a79720); // TODO: To be updated with the wallet address of the actual email service
+    AccountGuardian public accountGuardian;
 
     /*///////////////////////////////////////////////////////////////
                             Constructor
@@ -50,14 +44,12 @@ contract GuardianAccountFactory is BaseAccountFactory, ContractMetadata, Permiss
 
     constructor(
         IEntryPoint _entrypoint
-    ) BaseAccountFactory(address(new GuardianAccount(_entrypoint, address(this))), address(_entrypoint)) {
+    )
+        BaseAccountFactory(address(new GuardianAccount(_entrypoint, address(this))), address(_entrypoint))
+        DeployGuardianInfra()
+    {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        guardian = new Guardian();
-        accountLock = new AccountLock(guardian);
 
-        // emit the contract addresses
-        emit GuardianContractDeployed(address(guardian));
-        emit AccountLockContractDeployed(address(accountLock));
         emit GuardianAccountFactoryContractDeployed(address(this));
     }
 
@@ -80,15 +72,15 @@ contract GuardianAccountFactory is BaseAccountFactory, ContractMetadata, Permiss
         account = Clones.cloneDeterministic(impl, salt);
 
         if (msg.sender != entrypoint) {
-            require(allAccounts.add(account), "AccountFactory: account already registered");
+            require(BaseAccountFactory.allAccounts.add(account), "AccountFactory: account already registered");
         }
 
-        _initializeGuardianAccount(account, _admin, address(guardian), _email);
+        _initializeGuardianAccount(account, _admin, address(_guardian), _email);
         emit AccountCreated(account, _admin);
 
-        accountGuardian = new AccountGuardian(guardian, accountLock, payable(account), emailService, recoveryEmail);
+        accountGuardian = new AccountGuardian(_guardian, _accountLock, payable(account), emailService, recoveryEmail);
 
-        guardian.linkAccountToAccountGuardian(account, address(accountGuardian));
+        _guardian.linkAccountToAccountGuardian(account, address(accountGuardian));
 
         emit AccountGuardianContractDeployed(address(accountGuardian));
 
@@ -100,7 +92,7 @@ contract GuardianAccountFactory is BaseAccountFactory, ContractMetadata, Permiss
         address account = msg.sender;
         require(_isAccountOfFactory(account, _data), "AccountFactory: not an account.");
 
-        require(allAccounts.add(account), "AccountFactory: account already registered");
+        require(BaseAccountFactory.allAccounts.add(account), "AccountFactory: account already registered");
     }
 
     function onSignerAdded(address _signer, address _defaultAdmin, bytes memory _data) external {
@@ -128,7 +120,7 @@ contract GuardianAccountFactory is BaseAccountFactory, ContractMetadata, Permiss
 
     ///@dev  returns Account lock contract details
     function getAccountLock() external view returns (address) {
-        return (address(accountLock));
+        return (address(_accountLock));
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -148,7 +140,7 @@ contract GuardianAccountFactory is BaseAccountFactory, ContractMetadata, Permiss
         address commonGuardian,
         bytes calldata _data
     ) internal {
-        GuardianAccount(payable(_account)).initialize(_admin, commonGuardian, address(accountLock), _data);
+        GuardianAccount(payable(_account)).initialize(_admin, commonGuardian, address(_accountLock), _data);
     }
 
     /// @dev Returns whether contract metadata can be set in the given execution context.

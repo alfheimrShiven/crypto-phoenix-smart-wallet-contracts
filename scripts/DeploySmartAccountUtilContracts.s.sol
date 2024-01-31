@@ -44,8 +44,8 @@ contract DeploySmartAccountUtilContracts is Script {
         vm.prank(networkAccount);
         smartWalletAccount = guardianAccountFactory.createAccount(admin, abi.encode("shiven@gmail.com"));
 
-        Guardian guardianContract = guardianAccountFactory.guardian();
-        AccountLock accountLock = guardianAccountFactory.accountLock();
+        Guardian guardianContract = guardianAccountFactory.getGuardianContract();
+        AccountLock accountLock = guardianAccountFactory.getAccountLockContract();
 
         AccountGuardian accountGuardian = AccountGuardian(guardianContract.getAccountGuardian(smartWalletAccount));
 
