@@ -32,7 +32,7 @@ abstract contract BaseAccountFactory is IAccountFactory, Multicall {
     address public immutable accountImplementation;
     address public immutable entrypoint;
 
-    EnumerableSet.AddressSet private allAccounts;
+    EnumerableSet.AddressSet internal allAccounts;
     mapping(address => EnumerableSet.AddressSet) internal accountsOfSigner;
 
     /*///////////////////////////////////////////////////////////////

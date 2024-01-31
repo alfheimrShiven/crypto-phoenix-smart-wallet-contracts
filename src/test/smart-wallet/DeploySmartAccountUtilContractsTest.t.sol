@@ -41,7 +41,7 @@ contract DeploySmartAccountUtilContractsTest is Test {
                 address(accountRecovery) != address(0)
         );
 
-        assert(guardianContract == guardianAccountFactory.guardian());
-        assert(accountLock == guardianAccountFactory.accountLock());
+        assert(guardianContract == guardianAccountFactory.getGuardianContract());
+        assert(accountLock == guardianAccountFactory.getAccountLockContract());
     }
 }
