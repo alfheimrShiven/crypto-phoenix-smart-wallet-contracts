@@ -10,7 +10,6 @@ import { AccountGuardian } from "../utils/AccountGuardian.sol";
 
 // Extensions
 import "../../../extension/upgradeable//PermissionsEnumerable.sol";
-import "../../../extension/upgradeable//ContractMetadata.sol";
 
 // Interface
 import "../interface/IEntrypoint.sol";
@@ -27,7 +26,7 @@ import { GuardianAccount } from "./GuardianAccount.sol";
 //   \$$$$  |$$ |  $$ |$$ |$$ |      \$$$$$$$ |\$$$$$\$$$$  |\$$$$$$$\ $$$$$$$  |
 //    \____/ \__|  \__|\__|\__|       \_______| \_____\____/  \_______|\_______/
 
-contract GuardianAccountFactory is BaseAccountFactory, ContractMetadata, PermissionsEnumerable, DeployGuardianInfra {
+contract GuardianAccountFactory is BaseAccountFactory, DeployGuardianInfra {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     // Events //
@@ -48,8 +47,6 @@ contract GuardianAccountFactory is BaseAccountFactory, ContractMetadata, Permiss
         BaseAccountFactory(address(new GuardianAccount(_entrypoint, address(this))), address(_entrypoint))
         DeployGuardianInfra()
     {
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-
         emit GuardianAccountFactoryContractDeployed(address(this));
     }
 
@@ -141,11 +138,6 @@ contract GuardianAccountFactory is BaseAccountFactory, ContractMetadata, Permiss
         bytes calldata _data
     ) internal {
         GuardianAccount(payable(_account)).initialize(_admin, commonGuardian, address(_accountLock), _data);
-    }
-
-    /// @dev Returns whether contract metadata can be set in the given execution context.
-    function _canSetContractURI() internal view virtual override returns (bool) {
-        return hasRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     /// @dev Returns the salt used when deploying an Account.

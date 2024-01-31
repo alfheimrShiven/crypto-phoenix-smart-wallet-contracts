@@ -8,17 +8,12 @@ contract DeployGuardianInfra {
     event GuardianContractDeployed(address indexed guardianContract);
     event AccountLockContractDeployed(address indexed accountLockContract);
 
-    Guardian internal _guardian;
-    AccountLock internal _accountLock;
+    Guardian internal _guardian = new Guardian();
+    AccountLock internal _accountLock = new AccountLock(_guardian);
 
-    constructor() {
-        _guardian = new Guardian();
-        _accountLock = new AccountLock(_guardian);
-
-        // emit the contract addresses
-        emit GuardianContractDeployed(address(_guardian));
-        emit AccountLockContractDeployed(address(_accountLock));
-    }
+    // emit the contract addresses
+    // emit GuardianContractDeployed(address(_guardian));
+    // emit AccountLockContractDeployed(address(_accountLock));
 
     /////////////////////////////////////
     ///////// Getter Functions //////////
