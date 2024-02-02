@@ -84,14 +84,6 @@ contract GuardianAccountFactory is BaseAccountFactory, DeployGuardianInfra {
         return account;
     }
 
-    /// @notice Callback function for an Account to register itself on the factory.
-    function onRegister(address _defaultAdmin, bytes memory _data) external {
-        address account = msg.sender;
-        require(_isAccountOfFactory(account, _data), "AccountFactory: not an account.");
-
-        require(BaseAccountFactory.allAccounts.add(account), "AccountFactory: account already registered");
-    }
-
     function onSignerAdded(address _signer, address _defaultAdmin, bytes memory _data) external {
         address account = msg.sender;
         require(_isAccountOfFactory(account, _data), "AccountFactory: not an account.");
@@ -135,9 +127,9 @@ contract GuardianAccountFactory is BaseAccountFactory, DeployGuardianInfra {
         address _account,
         address _admin,
         address commonGuardian,
-        bytes calldata _data
+        bytes calldata _email
     ) internal {
-        GuardianAccount(payable(_account)).initialize(_admin, commonGuardian, address(_accountLock), _data);
+        GuardianAccount(payable(_account)).initialize(_admin, commonGuardian, address(_accountLock), _email);
     }
 
     /// @dev Returns the salt used when deploying an Account.

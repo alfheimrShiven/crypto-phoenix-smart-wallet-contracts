@@ -173,7 +173,7 @@ contract GuardianAccount is AccountCore, ContractMetadata, ERC1271, ERC721Holder
     function _registerOnFactory() internal virtual {
         GuardianAccountFactory factoryContract = GuardianAccountFactory(factory);
         if (!factoryContract.isRegistered(address(this))) {
-            factoryContract.onRegister(address(this), "");
+            factoryContract.onRegister(AccountCoreStorage.data().creationSalt);
         }
     }
 
@@ -202,25 +202,25 @@ contract GuardianAccount is AccountCore, ContractMetadata, ERC1271, ERC721Holder
         address _defaultAdmin,
         address _guardian,
         address _accountLock,
-        bytes calldata _data
+        bytes calldata _email
     ) public initializer {
         // This is passed as data in the `_registerOnFactory()` call in `AccountExtension` / `Account`.
         // AccountCoreStorage.data().firstAdmin = _defaultAdmin;
-        _setAdmin(_defaultAdmin, true, _data);
+        _setAdmin(_defaultAdmin, true, _email);
         commonGuardian = _guardian;
         accountLock = _accountLock;
-        recoveryEmailData = _data;
+        recoveryEmailData = _email;
     }
 
     /// @notice Makes the given account an admin.
-    function _setAdmin(address _account, bool _isAdmin, bytes memory _data) internal {
+    function _setAdmin(address _account, bool _isAdmin, bytes memory _email) internal {
         AccountPermissions._setAdmin(_account, _isAdmin);
 
         if (factory.code.length > 0) {
             if (_isAdmin) {
-                GuardianAccountFactory(factory).onSignerAdded(_account, _account, _data);
+                GuardianAccountFactory(factory).onSignerAdded(_account, _account, _email);
             } else {
-                GuardianAccountFactory(factory).onSignerRemoved(_account, _account, _data);
+                GuardianAccountFactory(factory).onSignerRemoved(_account, _account, _email);
             }
         }
     }
