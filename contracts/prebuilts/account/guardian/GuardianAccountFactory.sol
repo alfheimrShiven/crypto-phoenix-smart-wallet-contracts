@@ -7,7 +7,6 @@ import "../utils/BaseAccount.sol";
 import "../../../external-deps/openzeppelin/proxy/Clones.sol";
 import { DeployGuardianInfra } from "./DeployGuardianInfra.sol";
 import { AccountGuardian } from "../utils/AccountGuardian.sol";
-
 // Extensions
 import "../../../extension/upgradeable//PermissionsEnumerable.sol";
 
@@ -58,18 +57,22 @@ contract GuardianAccountFactory is BaseAccountFactory, DeployGuardianInfra {
     function createAccount(address _admin, bytes calldata _email) external virtual override returns (address) {
         address impl = BaseAccountFactory.accountImplementation;
         string memory recoveryEmail = abi.decode(_email, (string));
+
         bytes32 salt = _generateSalt(_email);
 
         address account = Clones.predictDeterministicAddress(impl, salt);
 
         if (account.code.length > 0) {
+            revert("AccountFactory: account already registered");
             return account;
         }
 
         account = Clones.cloneDeterministic(impl, salt);
 
         if (msg.sender != entrypoint) {
-            require(BaseAccountFactory.allAccounts.add(account), "AccountFactory: account already registered");
+            if (!BaseAccountFactory.allAccounts.add(account)) {
+                revert("AccountFactory: account already registered");
+            }
         }
 
         _initializeGuardianAccount(account, _admin, address(_guardian), _email);
