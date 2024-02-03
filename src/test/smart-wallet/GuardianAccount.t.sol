@@ -13,6 +13,7 @@ import { IAccountPermissions } from "contracts/extension/interface/IAccountPermi
 import { GuardianAccountFactory } from "contracts/prebuilts/account/guardian/GuardianAccountFactory.sol";
 import { GuardianAccount } from "contracts/prebuilts/account/guardian/GuardianAccount.sol";
 import { ECDSA } from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "forge-std/console.sol";
 
 /// @dev This is a dummy contract to test contract interactions with Account.
 contract Number {
@@ -50,12 +51,12 @@ contract GuardianAccountTest is BaseTest {
     address private nonSigner;
 
     // UserOp terminology: `sender` is the smart wallet.
-    address private sender = 0x1D6040e6D434768c8E362Dc7A9Aff82EE209f0cC;
+    address private sender = 0x9E9A101B93f334400AC115b33C8b4AdA0646DA48;
     address payable private beneficiary = payable(address(0x45654));
 
     bytes32 private uidCache = bytes32("random uid");
 
-    string public userEmail = userEmail;
+    string public userEmail = "shiven@gmail.com";
 
     event AccountCreated(address indexed account, address indexed accountAdmin);
 
@@ -113,9 +114,9 @@ contract GuardianAccountTest is BaseTest {
             nonce: nonce,
             initCode: _initCode,
             callData: _callDataForEntrypoint,
-            callGasLimit: 3000_000,
-            verificationGasLimit: 3000_000,
-            preVerificationGas: 3000_000,
+            callGasLimit: 1e10,
+            verificationGasLimit: 1e8,
+            preVerificationGas: 1e8,
             maxFeePerGas: 0,
             maxPriorityFeePerGas: 0,
             paymasterAndData: bytes(""),
@@ -153,9 +154,9 @@ contract GuardianAccountTest is BaseTest {
             nonce: nonce,
             initCode: _initCode,
             callData: _callDataForEntrypoint,
-            callGasLimit: 500_000,
-            verificationGasLimit: 500_000,
-            preVerificationGas: 500_000,
+            callGasLimit: 1e10,
+            verificationGasLimit: 1e8,
+            preVerificationGas: 1e8,
             maxFeePerGas: 0,
             maxPriorityFeePerGas: 0,
             paymasterAndData: bytes(""),
@@ -308,105 +309,105 @@ contract GuardianAccountTest is BaseTest {
     }
 
     /// @dev Create more than one accounts with the same admin.
-    //     function test_state_createAccount_viaEntrypoint_multipleAccountSameAdmin() public {
-    //         uint256 start = 0;
-    //         uint256 end = 0;
+    function test_state_guardianCreateAccount_viaEntrypoint_multipleAccountSameAdminDiffSalt() public {
+        assertEq(guardianAccountFactory.totalAccounts(), 0);
 
-    //         assertEq(guardianAccountFactory.totalAccounts(), 0);
+        uint256 amount = 10;
+        for (uint256 i = 0; i < amount; i += 1) {
+            bytes memory userEmailCallData = abi.encode(userEmail, i);
+            bytes memory initCallData = abi.encodeWithSignature(
+                "createAccount(address,bytes)",
+                accountAdmin,
+                userEmailCallData
+            );
 
-    //         vm.expectRevert("BaseAccountFactory: invalid indices");
-    //         address[] memory accs = guardianAccountFactory.getAccounts(start, end);
+            bytes memory initCode = abi.encodePacked(abi.encodePacked(address(guardianAccountFactory)), initCallData);
 
-    //         uint256 amount = 100;
+            address expectedSenderAddress = Clones.predictDeterministicAddress(
+                guardianAccountFactory.accountImplementation(),
+                _generateSalt(userEmailCallData),
+                address(guardianAccountFactory)
+            );
 
-    //         for (uint256 i = 0; i < amount; i += 1) {
-    //             bytes memory initCallData = abi.encodeWithSignature(
-    //                 "createAccount(address,bytes)",
-    //                 accountAdmin,
-    //                 bytes(abi.encode(i))
-    //             );
-    //             bytes memory initCode = abi.encodePacked(abi.encodePacked(address(guardianAccountFactory)), initCallData);
+            UserOperation[] memory userOpCreateAccount = _setupUserOpExecuteWithSender(
+                initCode,
+                address(0),
+                0,
+                userEmailCallData,
+                expectedSenderAddress
+            );
 
-    //             address expectedSenderAddress = Clones.predictDeterministicAddress(
-    //                 guardianAccountFactory.accountImplementation(),
-    //                 _generateSalt(abi.encode(userEmail)),
-    //                 address(guardianAccountFactory)
-    //             );
+            vm.expectEmit(true, true, false, true);
+            emit AccountCreated(expectedSenderAddress, accountAdmin);
+            EntryPoint(entrypoint).handleOps(userOpCreateAccount, beneficiary);
+        }
 
-    //             UserOperation[] memory userOpCreateAccount = _setupUserOpExecuteWithSender(
-    //                 initCode,
-    //                 address(0),
-    //                 0,
-    //                 bytes(abi.encode(i)),
-    //                 expectedSenderAddress
-    //             );
+        address[] memory allAccounts = guardianAccountFactory.getAllAccounts();
+        assertEq(allAccounts.length, amount);
+        assertEq(guardianAccountFactory.totalAccounts(), amount);
 
-    //             vm.expectEmit(true, true, false, true);
-    //             emit AccountCreated(sender, accountAdmin);
-    //             EntryPoint(entrypoint).handleOps(userOpCreateAccount, beneficiary);
-    //         }
+        for (uint256 i = 0; i < amount; i += 1) {
+            assertEq(
+                allAccounts[i],
+                Clones.predictDeterministicAddress(
+                    guardianAccountFactory.accountImplementation(),
+                    _generateSalt(abi.encode(userEmail, i)),
+                    address(guardianAccountFactory)
+                )
+            );
+        }
+    }
 
-    //         address[] memory allAccounts = guardianAccountFactory.getAllAccounts();
-    //         assertEq(allAccounts.length, amount);
-    //         assertEq(guardianAccountFactory.totalAccounts(), amount);
+    /// @dev Cannot create more than one accounts with the same admin and the same email.
+    function test_revert_guardianCreateAccount_viaFactory_multipleAccountSameAdminSameSalt() public {
+        assertEq(guardianAccountFactory.totalAccounts(), 0);
 
-    //         for (uint256 i = 0; i < amount; i += 1) {
-    //             assertEq(
-    //                 allAccounts[i],
-    //                 Clones.predictDeterministicAddress(
-    //                     guardianAccountFactory.accountImplementation(),
-    //                     _generateSalt(abi.encode(userEmail)),
-    //                     address(guardianAccountFactory)
-    //                 )
-    //             );
-    //         }
+        bytes memory userEmailCallData = abi.encode(userEmail);
 
-    //         start = 25;
-    //         end = 75;
+        vm.expectEmit(true, true, false, true);
+        emit AccountCreated(sender, accountAdmin);
+        vm.prank(accountAdmin);
+        guardianAccountFactory.createAccount(accountAdmin, userEmailCallData);
 
-    //         address[] memory accountsPaginatedOne = guardianAccountFactory.getAccounts(start, end);
+        vm.expectRevert("AccountFactory: account already registered");
+        vm.prank(accountAdmin);
+        guardianAccountFactory.createAccount(accountAdmin, userEmailCallData);
 
-    //         for (uint256 i = 0; i < (end - start); i += 1) {
-    //             assertEq(
-    //                 accountsPaginatedOne[i],
-    //                 Clones.predictDeterministicAddress(
-    //                     guardianAccountFactory.accountImplementation(),
-    //                     _generateSalt(abi.encode(userEmail)),
-    //                     address(guardianAccountFactory)
-    //                 )
-    //             );
-    //         }
+        assertEq(guardianAccountFactory.totalAccounts(), 1);
+    }
 
-    //         start = 0;
-    //         end = amount;
+    /// @dev Cannot create more than one accounts with the same admin and the same email.
+    function test_revert_guardianCreateAccount_viaEntrypoint_multipleAccountSameAdminSameSalt() public {
+        assertEq(guardianAccountFactory.totalAccounts(), 0);
 
-    //         address[] memory accountsPaginatedTwo = guardianAccountFactory.getAccounts(start, end);
+        bytes memory userEmailCallData = abi.encode(userEmail);
+        bytes memory initCallData = abi.encodeWithSignature(
+            "createAccount(address,bytes)",
+            accountAdmin,
+            userEmailCallData
+        );
 
-    //         for (uint256 i = 0; i < (end - start); i += 1) {
-    //             assertEq(
-    //                 accountsPaginatedTwo[i],
-    //                 Clones.predictDeterministicAddress(
-    //                     guardianAccountFactory.accountImplementation(),
-    //                     _generateSalt(abi.encode(userEmail)),
-    //                     address(guardianAccountFactory)
-    //                 )
-    //             );
-    //         }
+        bytes memory initCode = abi.encodePacked(abi.encodePacked(address(guardianAccountFactory)), initCallData);
 
-    //         start = 75;
-    //         end = 25;
+        UserOperation[] memory userOpCreateAccount = _setupUserOpExecuteWithSender(
+            initCode,
+            address(0),
+            0,
+            userEmailCallData,
+            sender
+        );
 
-    //         vm.expectRevert("BaseAccountFactory: invalid indices");
-    //         accs = guardianAccountFactory.getAccounts(start, end);
+        vm.expectEmit(true, true, false, true);
+        emit AccountCreated(sender, accountAdmin);
+        EntryPoint(entrypoint).handleOps(userOpCreateAccount, beneficiary);
 
-    //         start = 25;
-    //         end = amount + 1;
+        vm.expectRevert();
+        EntryPoint(entrypoint).handleOps(userOpCreateAccount, beneficiary);
 
-    //         vm.expectRevert("BaseAccountFactory: invalid indices");
-    //         accs = guardianAccountFactory.getAccounts(start, end);
-    //     }
+        assertEq(guardianAccountFactory.totalAccounts(), 1);
+    }
 
-    //     /*///////////////////////////////////////////////////////////////
+    /*///////////////////////////////////////////////////////////////
     //                     Test: performing a contract call
     //     //////////////////////////////////////////////////////////////*/
 
