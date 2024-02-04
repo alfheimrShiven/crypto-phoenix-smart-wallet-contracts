@@ -70,9 +70,7 @@ contract AccountRecovery is IAccountRecovery {
 
         newAdmin = msg.sender;
 
-        bytes32 recoveryRequestHash = keccak256(
-            abi.encodeWithSignature("updateAdmin(address newAdmin, bytes memory email)", newAdmin, abi.encode(email))
-        );
+        bytes32 recoveryRequestHash = keccak256(abi.encodeWithSignature("updateAdmin(address newAdmin)", newAdmin));
 
         accountRecoveryRequest = ECDSA.toEthSignedMessageHash(recoveryRequestHash);
 
