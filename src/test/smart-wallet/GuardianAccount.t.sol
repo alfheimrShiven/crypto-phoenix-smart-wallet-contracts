@@ -757,57 +757,57 @@ contract GuardianAccountTest is BaseTest {
         assertEq(erc1155.balanceOf(account, 0), 1);
     }
 
-    //     /*///////////////////////////////////////////////////////////////
+    /*///////////////////////////////////////////////////////////////
     //                 Test: setting contract metadata
-    //     //////////////////////////////////////////////////////////////*/
+    //     ///////////////////////////////////////////////////////////*/
 
-    //     /// @dev Set contract metadata via admin or entrypoint.
-    //     function test_state_contractMetadata() public {
-    //         _guardian_setup_executeTransaction();
-    //         address account = guardianAccountFactory.getAddress(accountAdmin, bytes(""));
+        /// @dev Set contract metadata via admin or entrypoint.
+        function test_state_guardianAccount_contractMetadata() public {
+            _guardian_setup_executeTransaction();
+            address account = guardianAccountFactory.getAddress(accountAdmin, userEmailEncoded);
 
-    //         vm.prank(accountAdmin);
-    //         GuardianAccount(payable(account)).setContractURI("https://example.com");
-    //         assertEq(GuardianAccount(payable(account)).contractURI(), "https://example.com");
+            vm.prank(accountAdmin);
+            GuardianAccount(payable(account)).setContractURI("https://example.com");
+            assertEq(GuardianAccount(payable(account)).contractURI(), "https://example.com");
 
-    //         UserOperation[] memory userOp = _setupUserOpExecute(
-    //             accountAdminPKey,
-    //             bytes(""),
-    //             address(account),
-    //             0,
-    //             abi.encodeWithSignature("setContractURI(string)", "https://thirdweb.com")
-    //         );
+            UserOperation[] memory userOp = _setupUserOpExecute(
+                accountAdminPKey,
+                bytes(""),
+                address(account),
+                0,
+                abi.encodeWithSignature("setContractURI(string)", "https://thirdweb.com")
+            );
 
-    //         EntryPoint(entrypoint).handleOps(userOp, beneficiary);
-    //         assertEq(GuardianAccount(payable(account)).contractURI(), "https://thirdweb.com");
+            EntryPoint(entrypoint).handleOps(userOp, beneficiary);
+            assertEq(GuardianAccount(payable(account)).contractURI(), "https://thirdweb.com");
 
-    //         address[] memory approvedTargets = new address[](0);
+            address[] memory approvedTargets = new address[](0);
 
-    //         IAccountPermissions.SignerPermissionRequest memory permissionsReq = IAccountPermissions.SignerPermissionRequest(
-    //             accountSigner,
-    //             0,
-    //             approvedTargets,
-    //             1 ether,
-    //             0,
-    //             type(uint128).max,
-    //             0,
-    //             type(uint128).max,
-    //             uidCache
-    //         );
+            IAccountPermissions.SignerPermissionRequest memory permissionsReq = IAccountPermissions.SignerPermissionRequest(
+                accountSigner,
+                0,
+                approvedTargets,
+                1 ether,
+                0,
+                type(uint128).max,
+                0,
+                type(uint128).max,
+                uidCache
+            );
 
-    //         vm.prank(accountAdmin);
-    //         bytes memory sig = _signSignerPermissionRequest(permissionsReq);
-    //         GuardianAccount(payable(account)).setPermissionsForSigner(permissionsReq, sig);
+            vm.prank(accountAdmin);
+            bytes memory sig = _signSignerPermissionRequest(permissionsReq);
+            GuardianAccount(payable(account)).setPermissionsForSigner(permissionsReq, sig);
 
-    //         UserOperation[] memory userOpViaSigner = _setupUserOpExecute(
-    //             accountSignerPKey,
-    //             bytes(""),
-    //             address(account),
-    //             0,
-    //             abi.encodeWithSignature("setContractURI(string)", "https://thirdweb.com")
-    //         );
+            UserOperation[] memory userOpViaSigner = _setupUserOpExecute(
+                accountSignerPKey,
+                bytes(""),
+                address(account),
+                0,
+                abi.encodeWithSignature("setContractURI(string)", "https://thirdweb.com")
+            );
 
-    //         vm.expectRevert();
-    //         EntryPoint(entrypoint).handleOps(userOpViaSigner, beneficiary);
-    //     }
+            vm.expectRevert();
+            EntryPoint(entrypoint).handleOps(userOpViaSigner, beneficiary);
+        }
 }
