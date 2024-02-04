@@ -57,6 +57,7 @@ contract GuardianAccountTest is BaseTest {
     bytes32 private uidCache = bytes32("random uid");
 
     string public userEmail = "shiven@gmail.com";
+    bytes public userEmailEncoded = abi.encode(userEmail);
 
     event AccountCreated(address indexed account, address indexed accountAdmin);
 
@@ -242,7 +243,7 @@ contract GuardianAccountTest is BaseTest {
 
         // Setup signers.
         accountAdmin = vm.addr(accountAdminPKey);
-        vm.deal(accountAdmin, 10 ether);
+        vm.deal(accountAdmin, 100 ether);
 
         accountSigner = vm.addr(accountSignerPKey);
         nonSigner = vm.addr(nonSignerPKey);
@@ -265,7 +266,7 @@ contract GuardianAccountTest is BaseTest {
         vm.expectEmit(true, true, false, true);
         emit AccountCreated(sender, accountAdmin);
 
-        address smartWalletAccount = guardianAccountFactory.createAccount(accountAdmin, abi.encode(userEmail));
+        address smartWalletAccount = guardianAccountFactory.createAccount(accountAdmin, userEmailEncoded);
 
         address[] memory allAccounts = guardianAccountFactory.getAllAccounts();
 
@@ -280,7 +281,7 @@ contract GuardianAccountTest is BaseTest {
         bytes memory initCallData = abi.encodeWithSignature(
             "createAccount(address,bytes)",
             accountAdmin,
-            abi.encode(userEmail)
+            userEmailEncoded
         );
         bytes memory initCode = abi.encodePacked(abi.encodePacked(address(guardianAccountFactory)), initCallData);
 
@@ -305,7 +306,7 @@ contract GuardianAccountTest is BaseTest {
     function test_revert_onRegister_nonGuardianFactoryChildContract() public {
         vm.prank(address(0x12345));
         vm.expectRevert("AccountFactory: not an account.");
-        guardianAccountFactory.onRegister(_generateSalt(abi.encode(userEmail)));
+        guardianAccountFactory.onRegister(_generateSalt(userEmailEncoded));
     }
 
     /// @dev Create more than one accounts with the same admin.
@@ -314,18 +315,18 @@ contract GuardianAccountTest is BaseTest {
 
         uint256 amount = 10;
         for (uint256 i = 0; i < amount; i += 1) {
-            bytes memory userEmailCallData = abi.encode(userEmail, i);
+            bytes memory userEmailDiffSaltCalldata = abi.encode(userEmail, i);
             bytes memory initCallData = abi.encodeWithSignature(
                 "createAccount(address,bytes)",
                 accountAdmin,
-                userEmailCallData
+                userEmailDiffSaltCalldata
             );
 
             bytes memory initCode = abi.encodePacked(abi.encodePacked(address(guardianAccountFactory)), initCallData);
 
             address expectedSenderAddress = Clones.predictDeterministicAddress(
                 guardianAccountFactory.accountImplementation(),
-                _generateSalt(userEmailCallData),
+                _generateSalt(userEmailDiffSaltCalldata),
                 address(guardianAccountFactory)
             );
 
@@ -333,7 +334,7 @@ contract GuardianAccountTest is BaseTest {
                 initCode,
                 address(0),
                 0,
-                userEmailCallData,
+                userEmailDiffSaltCalldata,
                 expectedSenderAddress
             );
 
@@ -362,16 +363,14 @@ contract GuardianAccountTest is BaseTest {
     function test_revert_guardianCreateAccount_viaFactory_multipleAccountSameAdminSameSalt() public {
         assertEq(guardianAccountFactory.totalAccounts(), 0);
 
-        bytes memory userEmailCallData = abi.encode(userEmail);
-
         vm.expectEmit(true, true, false, true);
         emit AccountCreated(sender, accountAdmin);
         vm.prank(accountAdmin);
-        guardianAccountFactory.createAccount(accountAdmin, userEmailCallData);
+        guardianAccountFactory.createAccount(accountAdmin, userEmailEncoded);
 
         vm.expectRevert("AccountFactory: account already registered");
         vm.prank(accountAdmin);
-        guardianAccountFactory.createAccount(accountAdmin, userEmailCallData);
+        guardianAccountFactory.createAccount(accountAdmin, userEmailEncoded);
 
         assertEq(guardianAccountFactory.totalAccounts(), 1);
     }
@@ -380,11 +379,10 @@ contract GuardianAccountTest is BaseTest {
     function test_revert_guardianCreateAccount_viaEntrypoint_multipleAccountSameAdminSameSalt() public {
         assertEq(guardianAccountFactory.totalAccounts(), 0);
 
-        bytes memory userEmailCallData = abi.encode(userEmail);
         bytes memory initCallData = abi.encodeWithSignature(
             "createAccount(address,bytes)",
             accountAdmin,
-            userEmailCallData
+            userEmailEncoded
         );
 
         bytes memory initCode = abi.encodePacked(abi.encodePacked(address(guardianAccountFactory)), initCallData);
@@ -393,7 +391,7 @@ contract GuardianAccountTest is BaseTest {
             initCode,
             address(0),
             0,
-            userEmailCallData,
+            userEmailEncoded,
             sender
         );
 
@@ -411,399 +409,405 @@ contract GuardianAccountTest is BaseTest {
     //                     Test: performing a contract call
     //     //////////////////////////////////////////////////////////////*/
 
-    //     function _setup_executeTransaction() internal {
-    //         bytes memory initCallData = abi.encodeWithSignature("createAccount(address,bytes)", accountAdmin, bytes(""));
-    //         bytes memory initCode = abi.encodePacked(abi.encodePacked(address(guardianAccountFactory)), initCallData);
+    function _guardian_setup_executeTransaction() internal {
+        bytes memory initCallData = abi.encodeWithSignature(
+            "createAccount(address,bytes)",
+            accountAdmin,
+            userEmailEncoded
+        );
+        bytes memory initCode = abi.encodePacked(abi.encodePacked(address(guardianAccountFactory)), initCallData);
 
-    //         UserOperation[] memory userOpCreateAccount = _setupUserOpExecute(
-    //             accountAdminPKey,
-    //             initCode,
-    //             address(0),
-    //             0,
-    //             bytes("")
-    //         );
+        UserOperation[] memory userOpCreateAccount = _setupUserOpExecute(
+            accountAdminPKey,
+            initCode,
+            address(0),
+            0,
+            bytes("")
+        );
 
-    //         EntryPoint(entrypoint).handleOps(userOpCreateAccount, beneficiary);
-    //     }
+        EntryPoint(entrypoint).handleOps(userOpCreateAccount, beneficiary);
+    }
 
     //     /// @dev Perform a state changing transaction directly via account.
-    //     function test_state_executeTransaction() public {
-    //         _setup_executeTransaction();
+    function test_state_guardianAccount_executeTransaction() public {
+        _guardian_setup_executeTransaction();
 
-    //         address account = guardianAccountFactory.getAddress(accountAdmin, bytes(""));
+        // Error: Returning a diff account address due to getAddress()
+        address account = guardianAccountFactory.getAddress(accountAdmin, userEmailEncoded);
 
-    //         assertEq(numberContract.num(), 0);
+        assertEq(numberContract.num(), 0);
 
-    //         vm.prank(accountAdmin);
-    //         GuardianAccount(payable(account)).execute(
-    //             address(numberContract),
-    //             0,
-    //             abi.encodeWithSignature("setNum(uint256)", 42)
-    //         );
+        vm.prank(accountAdmin);
+        GuardianAccount(payable(account)).execute(
+            address(numberContract),
+            0,
+            abi.encodeWithSignature("setNum(uint256)", 42)
+        );
 
-    //         assertEq(numberContract.num(), 42);
-    //     }
+        assertEq(numberContract.num(), 42);
+    }
 
-    //     /// @dev Perform many state changing transactions in a batch directly via account.
-    //     function test_state_executeBatchTransaction() public {
-    //         _setup_executeTransaction();
+    /// @dev Perform many state changing transactions in a batch directly via account.
+    function test_state_guardianAccount_executeBatchTransaction() public {
+        _guardian_setup_executeTransaction();
 
-    //         address account = guardianAccountFactory.getAddress(accountAdmin, bytes(""));
+        address account = guardianAccountFactory.getAddress(accountAdmin, userEmailEncoded);
 
-    //         assertEq(numberContract.num(), 0);
+        assertEq(numberContract.num(), 0);
 
-    //         uint256 count = 3;
-    //         address[] memory targets = new address[](count);
-    //         uint256[] memory values = new uint256[](count);
-    //         bytes[] memory callData = new bytes[](count);
+        uint256 count = 3;
+        address[] memory targets = new address[](count);
+        uint256[] memory values = new uint256[](count);
+        bytes[] memory callData = new bytes[](count);
 
-    //         for (uint256 i = 0; i < count; i += 1) {
-    //             targets[i] = address(numberContract);
-    //             values[i] = 0;
-    //             callData[i] = abi.encodeWithSignature("incrementNum()", i);
-    //         }
+        for (uint256 i = 0; i < count; i += 1) {
+            targets[i] = address(numberContract);
+            values[i] = 0;
+            callData[i] = abi.encodeWithSignature("incrementNum()", i);
+        }
 
-    //         vm.prank(accountAdmin);
-    //         GuardianAccount(payable(account)).executeBatch(targets, values, callData);
+        vm.prank(accountAdmin);
+        GuardianAccount(payable(account)).executeBatch(targets, values, callData);
 
-    //         assertEq(numberContract.num(), count);
-    //     }
+        assertEq(numberContract.num(), count);
+    }
 
-    //     /// @dev Perform a state changing transaction via Entrypoint.
-    //     function test_state_executeTransaction_viaEntrypoint() public {
-    //         _setup_executeTransaction();
+    /// @dev Perform a state changing transaction via Entrypoint.
+    function test_state_guardianAccount_executeTransaction_viaEntrypoint() public {
+        _guardian_setup_executeTransaction();
 
-    //         assertEq(numberContract.num(), 0);
+        assertEq(numberContract.num(), 0);
 
-    //         UserOperation[] memory userOp = _setupUserOpExecute(
-    //             accountAdminPKey,
-    //             bytes(""),
-    //             address(numberContract),
-    //             0,
-    //             abi.encodeWithSignature("setNum(uint256)", 42)
-    //         );
+        UserOperation[] memory userOp = _setupUserOpExecute(
+            accountAdminPKey,
+            bytes(""),
+            address(numberContract),
+            0,
+            abi.encodeWithSignature("setNum(uint256)", 42)
+        );
 
-    //         EntryPoint(entrypoint).handleOps(userOp, beneficiary);
+        EntryPoint(entrypoint).handleOps(userOp, beneficiary);
 
-    //         assertEq(numberContract.num(), 42);
-    //     }
+        assertEq(numberContract.num(), 42);
+    }
 
-    //     /// @dev Perform many state changing transactions in a batch via Entrypoint.
-    //     function test_state_executeBatchTransaction_viaEntrypoint() public {
-    //         _setup_executeTransaction();
+    /// @dev Perform many state changing transactions in a batch via Entrypoint.
+    function test_state_guardianAccount_executeBatchTransaction_viaEntrypoint() public {
+        _guardian_setup_executeTransaction();
 
-    //         assertEq(numberContract.num(), 0);
+        assertEq(numberContract.num(), 0);
 
-    //         uint256 count = 3;
-    //         address[] memory targets = new address[](count);
-    //         uint256[] memory values = new uint256[](count);
-    //         bytes[] memory callData = new bytes[](count);
+        uint256 count = 3;
+        address[] memory targets = new address[](count);
+        uint256[] memory values = new uint256[](count);
+        bytes[] memory callData = new bytes[](count);
 
-    //         for (uint256 i = 0; i < count; i += 1) {
-    //             targets[i] = address(numberContract);
-    //             values[i] = 0;
-    //             callData[i] = abi.encodeWithSignature("incrementNum()", i);
-    //         }
+        for (uint256 i = 0; i < count; i += 1) {
+            targets[i] = address(numberContract);
+            values[i] = 0;
+            callData[i] = abi.encodeWithSignature("incrementNum()", i);
+        }
 
-    //         UserOperation[] memory userOp = _setupUserOpExecuteBatch(
-    //             accountAdminPKey,
-    //             bytes(""),
-    //             targets,
-    //             values,
-    //             callData
-    //         );
+        UserOperation[] memory userOp = _setupUserOpExecuteBatch(
+            accountAdminPKey,
+            bytes(""),
+            targets,
+            values,
+            callData
+        );
 
-    //         EntryPoint(entrypoint).handleOps(userOp, beneficiary);
+        EntryPoint(entrypoint).handleOps(userOp, beneficiary);
 
-    //         assertEq(numberContract.num(), count);
-    //     }
+        assertEq(numberContract.num(), count);
+    }
 
-    //     /// @dev Perform many state changing transactions in a batch via Entrypoint.
-    //     function test_state_executeBatchTransaction_viaAccountSigner() public {
-    //         _setup_executeTransaction();
+    /// @dev Perform many state changing transactions in a batch via Entrypoint.
+    function test_state_guardianAccount_executeBatchTransaction_viaAccountSigner() public {
+        _guardian_setup_executeTransaction();
 
-    //         assertEq(numberContract.num(), 0);
+        assertEq(numberContract.num(), 0);
 
-    //         uint256 count = 3;
-    //         address[] memory targets = new address[](count);
-    //         uint256[] memory values = new uint256[](count);
-    //         bytes[] memory callData = new bytes[](count);
+        uint256 count = 3;
+        address[] memory targets = new address[](count);
+        uint256[] memory values = new uint256[](count);
+        bytes[] memory callData = new bytes[](count);
 
-    //         for (uint256 i = 0; i < count; i += 1) {
-    //             targets[i] = address(numberContract);
-    //             values[i] = 0;
-    //             callData[i] = abi.encodeWithSignature("incrementNum()", i);
-    //         }
+        for (uint256 i = 0; i < count; i += 1) {
+            targets[i] = address(numberContract);
+            values[i] = 0;
+            callData[i] = abi.encodeWithSignature("incrementNum()", i);
+        }
 
-    //         address account = guardianAccountFactory.getAddress(accountAdmin, bytes(""));
+        address account = guardianAccountFactory.getAddress(accountAdmin, userEmailEncoded);
 
-    //         address[] memory approvedTargets = new address[](1);
-    //         approvedTargets[0] = address(numberContract);
+        address[] memory approvedTargets = new address[](1);
+        approvedTargets[0] = address(numberContract);
 
-    //         IAccountPermissions.SignerPermissionRequest memory permissionsReq = IAccountPermissions.SignerPermissionRequest(
-    //             accountSigner,
-    //             0,
-    //             approvedTargets,
-    //             1 ether,
-    //             0,
-    //             type(uint128).max,
-    //             0,
-    //             type(uint128).max,
-    //             uidCache
-    //         );
+        IAccountPermissions.SignerPermissionRequest memory permissionsReq = IAccountPermissions.SignerPermissionRequest(
+            accountSigner,
+            0,
+            approvedTargets,
+            1 ether,
+            0,
+            type(uint128).max,
+            0,
+            type(uint128).max,
+            uidCache
+        );
 
-    //         vm.prank(accountAdmin);
-    //         bytes memory sig = _signSignerPermissionRequest(permissionsReq);
-    //         GuardianAccount(payable(account)).setPermissionsForSigner(permissionsReq, sig);
+        vm.prank(accountAdmin);
+        bytes memory sig = _signSignerPermissionRequest(permissionsReq);
 
-    //         UserOperation[] memory userOp = _setupUserOpExecuteBatch(
-    //             accountSignerPKey,
-    //             bytes(""),
-    //             targets,
-    //             values,
-    //             callData
-    //         );
+        GuardianAccount(payable(account)).setPermissionsForSigner(permissionsReq, sig);
 
-    //         EntryPoint(entrypoint).handleOps(userOp, beneficiary);
+        UserOperation[] memory userOp = _setupUserOpExecuteBatch(
+            accountSignerPKey,
+            bytes(""),
+            targets,
+            values,
+            callData
+        );
 
-    //         assertEq(numberContract.num(), count);
-    //     }
+        EntryPoint(entrypoint).handleOps(userOp, beneficiary);
 
-    //     /// @dev Perform a state changing transaction via Entrypoint and a SIGNER_ROLE holder.
-    //     function test_state_executeTransaction_viaAccountSigner() public {
-    //         _setup_executeTransaction();
+        assertEq(numberContract.num(), count);
+    }
 
-    //         address account = guardianAccountFactory.getAddress(accountAdmin, bytes(""));
+    /// @dev Perform a state changing transaction via Entrypoint and a SIGNER_ROLE holder.
+    function test_state_guardianAccount_executeTransaction_viaAccountSigner() public {
+        _guardian_setup_executeTransaction();
 
-    //         address[] memory approvedTargets = new address[](1);
-    //         approvedTargets[0] = address(numberContract);
+        address account = guardianAccountFactory.getAddress(accountAdmin, userEmailEncoded);
 
-    //         IAccountPermissions.SignerPermissionRequest memory permissionsReq = IAccountPermissions.SignerPermissionRequest(
-    //             accountSigner,
-    //             0,
-    //             approvedTargets,
-    //             1 ether,
-    //             0,
-    //             type(uint128).max,
-    //             0,
-    //             type(uint128).max,
-    //             uidCache
-    //         );
+        address[] memory approvedTargets = new address[](1);
+        approvedTargets[0] = address(numberContract);
 
-    //         vm.prank(accountAdmin);
-    //         bytes memory sig = _signSignerPermissionRequest(permissionsReq);
-    //         GuardianAccount(payable(account)).setPermissionsForSigner(permissionsReq, sig);
+        IAccountPermissions.SignerPermissionRequest memory permissionsReq = IAccountPermissions.SignerPermissionRequest(
+            accountSigner,
+            0,
+            approvedTargets,
+            1 ether,
+            0,
+            type(uint128).max,
+            0,
+            type(uint128).max,
+            uidCache
+        );
 
-    //         assertEq(numberContract.num(), 0);
+        vm.prank(accountAdmin);
+        bytes memory sig = _signSignerPermissionRequest(permissionsReq);
+        GuardianAccount(payable(account)).setPermissionsForSigner(permissionsReq, sig);
 
-    //         UserOperation[] memory userOp = _setupUserOpExecute(
-    //             accountSignerPKey,
-    //             bytes(""),
-    //             address(numberContract),
-    //             0,
-    //             abi.encodeWithSignature("setNum(uint256)", 42)
-    //         );
+        assertEq(numberContract.num(), 0);
 
-    //         EntryPoint(entrypoint).handleOps(userOp, beneficiary);
+        UserOperation[] memory userOp = _setupUserOpExecute(
+            accountSignerPKey,
+            bytes(""),
+            address(numberContract),
+            0,
+            abi.encodeWithSignature("setNum(uint256)", 42)
+        );
 
-    //         assertEq(numberContract.num(), 42);
-    //     }
+        EntryPoint(entrypoint).handleOps(userOp, beneficiary);
 
-    //     /// @dev Revert: perform a state changing transaction via Entrypoint without appropriate permissions.
-    //     function test_revert_executeTransaction_nonSigner_viaEntrypoint() public {
-    //         _setup_executeTransaction();
+        assertEq(numberContract.num(), 42);
+    }
 
-    //         assertEq(numberContract.num(), 0);
+    /// @dev Revert: perform a state changing transaction via Entrypoint without appropriate permissions.
+    function test_revert_guardianAccount_executeTransaction_nonSigner_viaEntrypoint() public {
+        _guardian_setup_executeTransaction();
 
-    //         UserOperation[] memory userOp = _setupUserOpExecute(
-    //             accountSignerPKey,
-    //             bytes(""),
-    //             address(numberContract),
-    //             0,
-    //             abi.encodeWithSignature("setNum(uint256)", 42)
-    //         );
+        assertEq(numberContract.num(), 0);
 
-    //         vm.expectRevert();
-    //         EntryPoint(entrypoint).handleOps(userOp, beneficiary);
-    //     }
+        UserOperation[] memory userOp = _setupUserOpExecute(
+            accountSignerPKey,
+            bytes(""),
+            address(numberContract),
+            0,
+            abi.encodeWithSignature("setNum(uint256)", 42)
+        );
 
-    //     /// @dev Revert: non-admin performs a state changing transaction directly via account contract.
-    //     function test_revert_executeTransaction_nonSigner_viaDirectCall() public {
-    //         _setup_executeTransaction();
+        vm.expectRevert();
+        EntryPoint(entrypoint).handleOps(userOp, beneficiary);
+    }
 
-    //         address account = guardianAccountFactory.getAddress(accountAdmin, bytes(""));
-    //         address[] memory approvedTargets = new address[](1);
-    //         approvedTargets[0] = address(numberContract);
-    //         IAccountPermissions.SignerPermissionRequest memory permissionsReq = IAccountPermissions.SignerPermissionRequest(
-    //             accountSigner,
-    //             0,
-    //             approvedTargets,
-    //             1 ether,
-    //             0,
-    //             type(uint128).max,
-    //             0,
-    //             type(uint128).max,
-    //             uidCache
-    //         );
+    /// @dev Revert: non-admin performs a state changing transaction directly via account contract.
+    function test_revert_executeTransaction_nonSigner_viaDirectCall() public {
+        _guardian_setup_executeTransaction();
 
-    //         vm.prank(accountAdmin);
-    //         bytes memory sig = _signSignerPermissionRequest(permissionsReq);
-    //         GuardianAccount(payable(account)).setPermissionsForSigner(permissionsReq, sig);
+        address account = guardianAccountFactory.getAddress(accountAdmin, userEmailEncoded);
+        address[] memory approvedTargets = new address[](1);
+        approvedTargets[0] = address(numberContract);
+        IAccountPermissions.SignerPermissionRequest memory permissionsReq = IAccountPermissions.SignerPermissionRequest(
+            accountSigner,
+            0,
+            approvedTargets,
+            1 ether,
+            0,
+            type(uint128).max,
+            0,
+            type(uint128).max,
+            uidCache
+        );
 
-    //         assertEq(numberContract.num(), 0);
+        vm.prank(accountAdmin);
+        bytes memory sig = _signSignerPermissionRequest(permissionsReq);
+        GuardianAccount(payable(account)).setPermissionsForSigner(permissionsReq, sig);
 
-    //         vm.prank(accountSigner);
-    //         vm.expectRevert("Account: not admin or EntryPoint.");
-    //         GuardianAccount(payable(account)).execute(
-    //             address(numberContract),
-    //             0,
-    //             abi.encodeWithSignature("setNum(uint256)", 42)
-    //         );
-    //     }
+        assertEq(numberContract.num(), 0);
 
-    //     /*///////////////////////////////////////////////////////////////
+        vm.prank(accountSigner);
+        vm.expectRevert("Account: not admin or EntryPoint.");
+        GuardianAccount(payable(account)).execute(
+            address(numberContract),
+            0,
+            abi.encodeWithSignature("setNum(uint256)", 42)
+        );
+    }
+
+    /*///////////////////////////////////////////////////////////////
     //                 Test: receiving and sending native tokens
-    //     //////////////////////////////////////////////////////////////*/
+    //     ///////////////////////////////////////////////////////////*/
 
-    //     /// @dev Send native tokens to an account.
-    //     function test_state_accountReceivesNativeTokens() public {
-    //         _setup_executeTransaction();
+    /// @dev Send native tokens to an account.
+    function test_state_guardianAccount_accountReceivesNativeTokens() public {
+        _guardian_setup_executeTransaction();
 
-    //         address account = guardianAccountFactory.getAddress(accountAdmin, bytes(""));
+        address account = guardianAccountFactory.getAddress(accountAdmin, userEmailEncoded);
 
-    //         assertEq(address(account).balance, 0);
+        assertEq(address(account).balance, 0);
 
-    //         vm.prank(accountAdmin);
-    //         // solhint-disable-next-line avoid-low-level-calls
-    //         (bool success, bytes memory data) = payable(account).call{ value: 1000 }("");
+        vm.prank(accountAdmin);
+        // solhint-disable-next-line avoid-low-level-calls
+        (bool success, bytes memory data) = payable(account).call{ value: 1000 }("");
 
-    //         // Silence warning: Return value of low-level calls not used.
-    //         (success, data) = (success, data);
+        // Silence warning: Return value of low-level calls not used.
+        (success, data) = (success, data);
 
-    //         assertEq(address(account).balance, 1000);
-    //     }
+        assertEq(address(account).balance, 1000);
+    }
 
-    //     /// @dev Transfer native tokens out of an account.
-    //     function test_state_transferOutsNativeTokens() public {
-    //         _setup_executeTransaction();
+    /// @dev Transfer native tokens out of an account.
+    function test_state_guardianAccount_transferOutsNativeTokens() public {
+        _guardian_setup_executeTransaction();
 
-    //         uint256 value = 1000;
+        uint256 value = 1000;
 
-    //         address account = guardianAccountFactory.getAddress(accountAdmin, bytes(""));
-    //         vm.prank(accountAdmin);
-    //         // solhint-disable-next-line avoid-low-level-calls
-    //         (bool success, bytes memory data) = payable(account).call{ value: value }("");
-    //         assertEq(address(account).balance, value);
+        address account = guardianAccountFactory.getAddress(accountAdmin, userEmailEncoded);
+        vm.prank(accountAdmin);
+        // solhint-disable-next-line avoid-low-level-calls
+        (bool success, bytes memory data) = payable(account).call{ value: value }("");
+        assertEq(address(account).balance, value);
 
-    //         // Silence warning: Return value of low-level calls not used.
-    //         (success, data) = (success, data);
+        // Silence warning: Return value of low-level calls not used.
+        (success, data) = (success, data);
 
-    //         address recipient = address(0x3456);
+        address recipient = address(0x3456);
 
-    //         UserOperation[] memory userOp = _setupUserOpExecute(accountAdminPKey, bytes(""), recipient, value, bytes(""));
+        UserOperation[] memory userOp = _setupUserOpExecute(accountAdminPKey, bytes(""), recipient, value, bytes(""));
 
-    //         EntryPoint(entrypoint).handleOps(userOp, beneficiary);
-    //         assertEq(address(account).balance, 0);
-    //         assertEq(recipient.balance, value);
-    //     }
+        EntryPoint(entrypoint).handleOps(userOp, beneficiary);
+        assertEq(address(account).balance, 0);
+        assertEq(recipient.balance, value);
+    }
 
-    //     /// @dev Add and remove a deposit for the account from the Entrypoint.
+    /// @dev Add and remove a deposit for the account from the Entrypoint.
 
-    //     function test_state_addAndWithdrawDeposit() public {
-    //         _setup_executeTransaction();
+    function test_state_guardianAccount_addAndWithdrawDeposit() public {
+        _guardian_setup_executeTransaction();
 
-    //         address account = guardianAccountFactory.getAddress(accountAdmin, bytes(""));
+        address account = guardianAccountFactory.getAddress(accountAdmin, userEmailEncoded);
 
-    //         assertEq(EntryPoint(entrypoint).balanceOf(account), 0);
+        assertEq(EntryPoint(entrypoint).balanceOf(account), 0);
 
-    //         vm.prank(accountAdmin);
-    //         GuardianAccount(payable(account)).addDeposit{ value: 1000 }();
-    //         assertEq(EntryPoint(entrypoint).balanceOf(account), 1000);
+        vm.prank(accountAdmin);
+        GuardianAccount(payable(account)).addDeposit{ value: 1000 }();
+        assertEq(EntryPoint(entrypoint).balanceOf(account), 1000);
 
-    //         vm.prank(accountAdmin);
-    //         GuardianAccount(payable(account)).withdrawDepositTo(payable(accountSigner), 500);
-    //         assertEq(EntryPoint(entrypoint).balanceOf(account), 500);
-    //     }
+        vm.prank(accountAdmin);
+        GuardianAccount(payable(account)).withdrawDepositTo(payable(accountSigner), 500);
+        assertEq(EntryPoint(entrypoint).balanceOf(account), 500);
+    }
 
-    //     /*///////////////////////////////////////////////////////////////
+    /*///////////////////////////////////////////////////////////////
     //                 Test: receiving ERC-721 and ERC-1155 NFTs
-    //     //////////////////////////////////////////////////////////////*/
+    //     ///////////////////////////////////////////////////////////*/
 
-    //     /// @dev Send an ERC-721 NFT to an account.
-    //     function test_state_receiveERC721NFT() public {
-    //         _setup_executeTransaction();
-    //         address account = guardianAccountFactory.getAddress(accountAdmin, bytes(""));
+    /// @dev Send an ERC-721 NFT to an account.
+    function test_state_guardianAccount_receiveERC721NFT() public {
+        _guardian_setup_executeTransaction();
+        address account = guardianAccountFactory.getAddress(accountAdmin, userEmailEncoded);
 
-    //         assertEq(erc721.balanceOf(account), 0);
+        assertEq(erc721.balanceOf(account), 0);
 
-    //         erc721.mint(account, 1);
+        erc721.mint(account, 1);
 
-    //         assertEq(erc721.balanceOf(account), 1);
-    //     }
+        assertEq(erc721.balanceOf(account), 1);
+    }
 
-    //     /// @dev Send an ERC-1155 NFT to an account.
-    //     function test_state_receiveERC1155NFT() public {
-    //         _setup_executeTransaction();
-    //         address account = guardianAccountFactory.getAddress(accountAdmin, bytes(""));
+    /// @dev Send an ERC-1155 NFT to an account.
+    function test_state_guardianAccount_receiveERC1155NFT() public {
+        _guardian_setup_executeTransaction();
+        address account = guardianAccountFactory.getAddress(accountAdmin, userEmailEncoded);
 
-    //         assertEq(erc1155.balanceOf(account, 0), 0);
+        assertEq(erc1155.balanceOf(account, 0), 0);
 
-    //         erc1155.mint(account, 0, 1);
+        erc1155.mint(account, 0, 1);
 
-    //         assertEq(erc1155.balanceOf(account, 0), 1);
-    //     }
+        assertEq(erc1155.balanceOf(account, 0), 1);
+    }
 
-    //     /*///////////////////////////////////////////////////////////////
+    /*///////////////////////////////////////////////////////////////
     //                 Test: setting contract metadata
-    //     //////////////////////////////////////////////////////////////*/
+    //     ///////////////////////////////////////////////////////////*/
 
-    //     /// @dev Set contract metadata via admin or entrypoint.
-    //     function test_state_contractMetadata() public {
-    //         _setup_executeTransaction();
-    //         address account = guardianAccountFactory.getAddress(accountAdmin, bytes(""));
+        /// @dev Set contract metadata via admin or entrypoint.
+        function test_state_guardianAccount_contractMetadata() public {
+            _guardian_setup_executeTransaction();
+            address account = guardianAccountFactory.getAddress(accountAdmin, userEmailEncoded);
 
-    //         vm.prank(accountAdmin);
-    //         GuardianAccount(payable(account)).setContractURI("https://example.com");
-    //         assertEq(GuardianAccount(payable(account)).contractURI(), "https://example.com");
+            vm.prank(accountAdmin);
+            GuardianAccount(payable(account)).setContractURI("https://example.com");
+            assertEq(GuardianAccount(payable(account)).contractURI(), "https://example.com");
 
-    //         UserOperation[] memory userOp = _setupUserOpExecute(
-    //             accountAdminPKey,
-    //             bytes(""),
-    //             address(account),
-    //             0,
-    //             abi.encodeWithSignature("setContractURI(string)", "https://thirdweb.com")
-    //         );
+            UserOperation[] memory userOp = _setupUserOpExecute(
+                accountAdminPKey,
+                bytes(""),
+                address(account),
+                0,
+                abi.encodeWithSignature("setContractURI(string)", "https://thirdweb.com")
+            );
 
-    //         EntryPoint(entrypoint).handleOps(userOp, beneficiary);
-    //         assertEq(GuardianAccount(payable(account)).contractURI(), "https://thirdweb.com");
+            EntryPoint(entrypoint).handleOps(userOp, beneficiary);
+            assertEq(GuardianAccount(payable(account)).contractURI(), "https://thirdweb.com");
 
-    //         address[] memory approvedTargets = new address[](0);
+            address[] memory approvedTargets = new address[](0);
 
-    //         IAccountPermissions.SignerPermissionRequest memory permissionsReq = IAccountPermissions.SignerPermissionRequest(
-    //             accountSigner,
-    //             0,
-    //             approvedTargets,
-    //             1 ether,
-    //             0,
-    //             type(uint128).max,
-    //             0,
-    //             type(uint128).max,
-    //             uidCache
-    //         );
+            IAccountPermissions.SignerPermissionRequest memory permissionsReq = IAccountPermissions.SignerPermissionRequest(
+                accountSigner,
+                0,
+                approvedTargets,
+                1 ether,
+                0,
+                type(uint128).max,
+                0,
+                type(uint128).max,
+                uidCache
+            );
 
-    //         vm.prank(accountAdmin);
-    //         bytes memory sig = _signSignerPermissionRequest(permissionsReq);
-    //         GuardianAccount(payable(account)).setPermissionsForSigner(permissionsReq, sig);
+            vm.prank(accountAdmin);
+            bytes memory sig = _signSignerPermissionRequest(permissionsReq);
+            GuardianAccount(payable(account)).setPermissionsForSigner(permissionsReq, sig);
 
-    //         UserOperation[] memory userOpViaSigner = _setupUserOpExecute(
-    //             accountSignerPKey,
-    //             bytes(""),
-    //             address(account),
-    //             0,
-    //             abi.encodeWithSignature("setContractURI(string)", "https://thirdweb.com")
-    //         );
+            UserOperation[] memory userOpViaSigner = _setupUserOpExecute(
+                accountSignerPKey,
+                bytes(""),
+                address(account),
+                0,
+                abi.encodeWithSignature("setContractURI(string)", "https://thirdweb.com")
+            );
 
-    //         vm.expectRevert();
-    //         EntryPoint(entrypoint).handleOps(userOpViaSigner, beneficiary);
-    //     }
+            vm.expectRevert();
+            EntryPoint(entrypoint).handleOps(userOpViaSigner, beneficiary);
+        }
 }
