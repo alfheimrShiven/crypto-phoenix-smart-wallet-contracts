@@ -38,7 +38,6 @@ contract AccountLockTest is Test {
 
         (account, guardianAccountFactory, guardianContract, accountLock, , ) = deployer.run();
 
-        account = guardianAccountFactory.createAccount(admin, abi.encode("shiven@gmail.com"));
         accountGuardian = AccountGuardian(guardianContract.getAccountGuardian(account));
         vm.deal(guardian, GUARDIAN_STARTING_BALANCE);
     }
