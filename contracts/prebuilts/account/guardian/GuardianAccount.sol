@@ -149,8 +149,7 @@ contract GuardianAccount is AccountCore, ContractMetadata, ERC1271, ERC721Holder
 
     /// @notice Updates the account admin (post recovery concensus)
     function updateAdmin(address newAdmin) external onlyAccountRecovery(msg.sender) {
-        // retrieving `recoveryEmailData` from `AccountCore::recoveryEmailData` passed during initialization of smart account contract
-        _setAdmin(newAdmin, true, recoveryEmailData);
+        _setAdmin(newAdmin, true);
 
         emit AdminUpdated(newAdmin);
     }
@@ -204,24 +203,17 @@ contract GuardianAccount is AccountCore, ContractMetadata, ERC1271, ERC721Holder
         address _accountLock,
         bytes calldata _email
     ) public initializer {
-        // This is passed as data in the `_registerOnFactory()` call in `AccountExtension` / `Account`.
+        // `firstAdmin` is passed as data in the `_registerOnFactory()` call in `AccountExtension` / `Account`.
         // AccountCoreStorage.data().firstAdmin = _defaultAdmin;
-        _setAdmin(_defaultAdmin, true, _email);
+        AccountCoreStorage.data().creationSalt = _generateSalt(_email);
+        _setAdmin(_defaultAdmin, true);
         commonGuardian = _guardian;
         accountLock = _accountLock;
         recoveryEmailData = _email;
     }
 
-    /// @notice Makes the given account an admin.
-    function _setAdmin(address _account, bool _isAdmin, bytes memory _email) internal {
-        AccountPermissions._setAdmin(_account, _isAdmin);
-
-        if (factory.code.length > 0) {
-            if (_isAdmin) {
-                GuardianAccountFactory(factory).onSignerAdded(_account, _account, _email);
-            } else {
-                GuardianAccountFactory(factory).onSignerRemoved(_account, _account, _email);
-            }
-        }
+    /// @dev Returns the salt used when deploying an Account.
+    function _generateSalt(bytes memory _data) internal view virtual returns (bytes32) {
+        return keccak256(_data);
     }
 }

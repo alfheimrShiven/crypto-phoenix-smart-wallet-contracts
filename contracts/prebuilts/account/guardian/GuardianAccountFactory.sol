@@ -58,7 +58,7 @@ contract GuardianAccountFactory is BaseAccountFactory, DeployGuardianInfra {
         address impl = BaseAccountFactory.accountImplementation;
         string memory recoveryEmail = abi.decode(_email, (string));
 
-        bytes32 salt = _generateSalt(_email);
+        bytes32 salt = _generateSalt(_email); /// @dev salt generation is _admin independent because during a recovery process the _admin can change for an existing account
 
         address account = Clones.predictDeterministicAddress(impl, salt);
 
@@ -87,29 +87,6 @@ contract GuardianAccountFactory is BaseAccountFactory, DeployGuardianInfra {
         return account;
     }
 
-    function onSignerAdded(address _signer, address _defaultAdmin, bytes memory _data) external {
-        address account = msg.sender;
-        require(_isAccountOfFactory(account, _data), "AccountFactory: not an account.");
-
-        bool isNewSigner = accountsOfSigner[_signer].add(account);
-
-        if (isNewSigner) {
-            emit SignerAdded(account, _signer);
-        }
-    }
-
-    /// @notice Callback function for an Account to un-register its signers.
-    function onSignerRemoved(address _signer, address _defaultAdmin, bytes memory _data) external {
-        address account = msg.sender;
-        require(_isAccountOfFactory(account, _data), "AccountFactory: not an account.");
-
-        bool isAccount = accountsOfSigner[_signer].remove(account);
-
-        if (isAccount) {
-            emit SignerRemoved(account, _signer);
-        }
-    }
-
     ///@dev  returns Account lock contract details
     function getAccountLock() external view returns (address) {
         return (address(_accountLock));
@@ -118,11 +95,11 @@ contract GuardianAccountFactory is BaseAccountFactory, DeployGuardianInfra {
     /*///////////////////////////////////////////////////////////////
                         Internal functions
     //////////////////////////////////////////////////////////////*/
-    /// @dev Returns whether the caller is an account deployed by this factory.
-    function _isAccountOfFactory(address _account, bytes memory _data) internal view virtual returns (bool) {
+
+    /// @notice Returns the address of an Account that would be deployed with the given admin signer.
+    function getAddress(address _adminSigner, bytes calldata _data) public view override returns (address) {
         bytes32 salt = _generateSalt(_data);
-        address predicted = Clones.predictDeterministicAddress(BaseAccountFactory.accountImplementation, salt);
-        return _account == predicted;
+        return Clones.predictDeterministicAddress(accountImplementation, salt);
     }
 
     /// @dev Called in `createAccount`. Initializes the account contract created in `createAccount`.
