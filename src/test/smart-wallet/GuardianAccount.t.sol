@@ -729,33 +729,33 @@ contract GuardianAccountTest is BaseTest {
         assertEq(EntryPoint(entrypoint).balanceOf(account), 500);
     }
 
-    //     /*///////////////////////////////////////////////////////////////
+    /*///////////////////////////////////////////////////////////////
     //                 Test: receiving ERC-721 and ERC-1155 NFTs
-    //     //////////////////////////////////////////////////////////////*/
+    //     ///////////////////////////////////////////////////////////*/
 
-    //     /// @dev Send an ERC-721 NFT to an account.
-    //     function test_state_receiveERC721NFT() public {
-    //         _guardian_setup_executeTransaction();
-    //         address account = guardianAccountFactory.getAddress(accountAdmin, bytes(""));
+    /// @dev Send an ERC-721 NFT to an account.
+    function test_state_guardianAccount_receiveERC721NFT() public {
+        _guardian_setup_executeTransaction();
+        address account = guardianAccountFactory.getAddress(accountAdmin, userEmailEncoded);
 
-    //         assertEq(erc721.balanceOf(account), 0);
+        assertEq(erc721.balanceOf(account), 0);
 
-    //         erc721.mint(account, 1);
+        erc721.mint(account, 1);
 
-    //         assertEq(erc721.balanceOf(account), 1);
-    //     }
+        assertEq(erc721.balanceOf(account), 1);
+    }
 
-    //     /// @dev Send an ERC-1155 NFT to an account.
-    //     function test_state_receiveERC1155NFT() public {
-    //         _guardian_setup_executeTransaction();
-    //         address account = guardianAccountFactory.getAddress(accountAdmin, bytes(""));
+    /// @dev Send an ERC-1155 NFT to an account.
+    function test_state_guardianAccount_receiveERC1155NFT() public {
+        _guardian_setup_executeTransaction();
+        address account = guardianAccountFactory.getAddress(accountAdmin, userEmailEncoded);
 
-    //         assertEq(erc1155.balanceOf(account, 0), 0);
+        assertEq(erc1155.balanceOf(account, 0), 0);
 
-    //         erc1155.mint(account, 0, 1);
+        erc1155.mint(account, 0, 1);
 
-    //         assertEq(erc1155.balanceOf(account, 0), 1);
-    //     }
+        assertEq(erc1155.balanceOf(account, 0), 1);
+    }
 
     //     /*///////////////////////////////////////////////////////////////
     //                 Test: setting contract metadata
