@@ -665,69 +665,69 @@ contract GuardianAccountTest is BaseTest {
         );
     }
 
-    //     /*///////////////////////////////////////////////////////////////
+    /*///////////////////////////////////////////////////////////////
     //                 Test: receiving and sending native tokens
-    //     //////////////////////////////////////////////////////////////*/
+    //     ///////////////////////////////////////////////////////////*/
 
-    //     /// @dev Send native tokens to an account.
-    //     function test_state_accountReceivesNativeTokens() public {
-    //         _guardian_setup_executeTransaction();
+    /// @dev Send native tokens to an account.
+    function test_state_guardianAccount_accountReceivesNativeTokens() public {
+        _guardian_setup_executeTransaction();
 
-    //         address account = guardianAccountFactory.getAddress(accountAdmin, bytes(""));
+        address account = guardianAccountFactory.getAddress(accountAdmin, userEmailEncoded);
 
-    //         assertEq(address(account).balance, 0);
+        assertEq(address(account).balance, 0);
 
-    //         vm.prank(accountAdmin);
-    //         // solhint-disable-next-line avoid-low-level-calls
-    //         (bool success, bytes memory data) = payable(account).call{ value: 1000 }("");
+        vm.prank(accountAdmin);
+        // solhint-disable-next-line avoid-low-level-calls
+        (bool success, bytes memory data) = payable(account).call{ value: 1000 }("");
 
-    //         // Silence warning: Return value of low-level calls not used.
-    //         (success, data) = (success, data);
+        // Silence warning: Return value of low-level calls not used.
+        (success, data) = (success, data);
 
-    //         assertEq(address(account).balance, 1000);
-    //     }
+        assertEq(address(account).balance, 1000);
+    }
 
-    //     /// @dev Transfer native tokens out of an account.
-    //     function test_state_transferOutsNativeTokens() public {
-    //         _guardian_setup_executeTransaction();
+    /// @dev Transfer native tokens out of an account.
+    function test_state_guardianAccount_transferOutsNativeTokens() public {
+        _guardian_setup_executeTransaction();
 
-    //         uint256 value = 1000;
+        uint256 value = 1000;
 
-    //         address account = guardianAccountFactory.getAddress(accountAdmin, bytes(""));
-    //         vm.prank(accountAdmin);
-    //         // solhint-disable-next-line avoid-low-level-calls
-    //         (bool success, bytes memory data) = payable(account).call{ value: value }("");
-    //         assertEq(address(account).balance, value);
+        address account = guardianAccountFactory.getAddress(accountAdmin, userEmailEncoded);
+        vm.prank(accountAdmin);
+        // solhint-disable-next-line avoid-low-level-calls
+        (bool success, bytes memory data) = payable(account).call{ value: value }("");
+        assertEq(address(account).balance, value);
 
-    //         // Silence warning: Return value of low-level calls not used.
-    //         (success, data) = (success, data);
+        // Silence warning: Return value of low-level calls not used.
+        (success, data) = (success, data);
 
-    //         address recipient = address(0x3456);
+        address recipient = address(0x3456);
 
-    //         UserOperation[] memory userOp = _setupUserOpExecute(accountAdminPKey, bytes(""), recipient, value, bytes(""));
+        UserOperation[] memory userOp = _setupUserOpExecute(accountAdminPKey, bytes(""), recipient, value, bytes(""));
 
-    //         EntryPoint(entrypoint).handleOps(userOp, beneficiary);
-    //         assertEq(address(account).balance, 0);
-    //         assertEq(recipient.balance, value);
-    //     }
+        EntryPoint(entrypoint).handleOps(userOp, beneficiary);
+        assertEq(address(account).balance, 0);
+        assertEq(recipient.balance, value);
+    }
 
-    //     /// @dev Add and remove a deposit for the account from the Entrypoint.
+    /// @dev Add and remove a deposit for the account from the Entrypoint.
 
-    //     function test_state_addAndWithdrawDeposit() public {
-    //         _guardian_setup_executeTransaction();
+    function test_state_guardianAccount_addAndWithdrawDeposit() public {
+        _guardian_setup_executeTransaction();
 
-    //         address account = guardianAccountFactory.getAddress(accountAdmin, bytes(""));
+        address account = guardianAccountFactory.getAddress(accountAdmin, userEmailEncoded);
 
-    //         assertEq(EntryPoint(entrypoint).balanceOf(account), 0);
+        assertEq(EntryPoint(entrypoint).balanceOf(account), 0);
 
-    //         vm.prank(accountAdmin);
-    //         GuardianAccount(payable(account)).addDeposit{ value: 1000 }();
-    //         assertEq(EntryPoint(entrypoint).balanceOf(account), 1000);
+        vm.prank(accountAdmin);
+        GuardianAccount(payable(account)).addDeposit{ value: 1000 }();
+        assertEq(EntryPoint(entrypoint).balanceOf(account), 1000);
 
-    //         vm.prank(accountAdmin);
-    //         GuardianAccount(payable(account)).withdrawDepositTo(payable(accountSigner), 500);
-    //         assertEq(EntryPoint(entrypoint).balanceOf(account), 500);
-    //     }
+        vm.prank(accountAdmin);
+        GuardianAccount(payable(account)).withdrawDepositTo(payable(accountSigner), 500);
+        assertEq(EntryPoint(entrypoint).balanceOf(account), 500);
+    }
 
     //     /*///////////////////////////////////////////////////////////////
     //                 Test: receiving ERC-721 and ERC-1155 NFTs
