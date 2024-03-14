@@ -9,7 +9,7 @@
 </ol>
 
 ## Problem Statement
-As we all know, a wallet is a gateway to web3 but the wallet experience is unfortunately broken! For a user to interact with a blockchain, they not only have to **create a wallet but also secure their private keys and seed phrase, purchase native tokes to pay for gas, and sign every single action** that they take on a dApp. 
+As we all know, a wallet is a gateway to web3 but the wallet experience is unfortunately broken! For a user to interact with a blockchain, they not only have to **create a wallet but also secure their private keys and seed phrase, purchase native tokes to pay for gas, and sign every single action** that they take on a dApp.
 
 Such an intimidating user experience for newcomers is a big obstacle in the mass adoption of web3 and Guardian Wallet SDK is here to change this through its **Account abstraction technology.**
 
@@ -24,7 +24,7 @@ Eliminates the need to manage private keys or seed phrase, making it easier and 
 <h4>Enable gasless transactions:</h4>
 Dapps providing smart account can sponser gas on behalf of their users therefore reducing investment to entry and drastically improving user experience as users now don't have to approve each transaction they make with the Dapp.
 </li>
-<li> 
+<li>
 <h4>Enhanced security through account locking, social recovery and multisig: </h4>
 In case the user lose access to their wallet, they can immediately lock their account assets, holding all withdrawal transactions, and can even recover access to their accounts through concensus of their account guardians (trusted people who the user allots to help recover their account in case required). <br />
 Smart accounts can also provide multisig capabilities, requiring multiple signatures on a transaction, before it's executed, thus enchancing security.
@@ -33,7 +33,7 @@ Smart accounts can also provide multisig capabilities, requiring multiple signat
 Enables self executing transactions when certain defined conditions are met like approving a predefined number of tokens to an entity based on fixed time intervals, stop loss and take profit orders, recurring subscriptions, etc.
 </li>
 </ol>
- 
+
 ## Architecture
 
 <img src="./images/architecture.png" width="600" alt="Guardian_architecture">
@@ -55,19 +55,29 @@ The wallet SDK is a rollup to thirdweb's smart wallet (ERC-4337) contracts. We'v
 
 <summary><b>⚠️ Disclaimer</b></summary>
   <p>The above mentioned contracts are unaudited. Kindly include them in the scope of your audits before going live.</p>
-  
-## Documentation 
+
+## Documentation
 
 [**Guardian Smart Wallet Contract Docs**](https://0xshiven.gitbook.io/guardian-smart-wallet-contracts)
 
-## Author: 
+## Author:
 ### Shivendra Singh
 [![GitHub](https://img.shields.io/badge/GitHub-Profile-black?logo=github)](https://github.com/alfheimrShiven)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue?logo=linkedin)](https://www.linkedin.com/in/shivends)
 [![Twitter](https://img.shields.io/badge/Twitter-Profile-blue?logo=twitter)](https://twitter.com/0xShiven)
 [![Substack](https://img.shields.io/badge/Substack-Newsletter-orange?logo=substack)](https://0xshiven.substack.com/)
 
+### samar abdelhameed
+1-Account.sol
+2-AccountGuardian.sol
+3-Guardian.sol
+4-AccountLock.sol
+5-AccountRecovery.sol
+
+[![audit smart contract report- analysis](https://drive.google.com/file/d/1FFbuBnwPWNzDfKqNN3lwPbXI7i_Irnz0/view?usp=sharing)
+
 
 ## License
 
 [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0.txt)
+
